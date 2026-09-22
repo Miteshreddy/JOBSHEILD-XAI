@@ -1,0 +1,11 @@
+**/node_modules
+**/.venv
+**/dist
+**/__pycache__
+**/.pytest_cache
+ai_service/dataset/*.csv
+ai_service/dataset/processed
+ai_service/models_store
+.git
+.claude
+docs

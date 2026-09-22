@@ -1,0 +1,63 @@
+# --- Datasets & model artifacts (fetched/generated, not committed) ---
+ai_service/dataset/*.csv
+ai_service/dataset/*.json
+ai_service/dataset/processed/
+# Note: docs/eda/ (report + charts) IS committed intentionally — it's small,
+# reviewable documentation of real analysis, not a bulk data artifact.
+ai_service/models_store/**
+!ai_service/models_store/.gitkeep
+ai_service/**/runs/
+ai_service/**/*.pt
+ai_service/**/*.bin
+ai_service/**/*.safetensors
+ai_service/**/checkpoint-*/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# --- Node / JS ---
+node_modules/
+frontend/dist/
+frontend/build/
+backend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+
+# --- Env / secrets ---
+.env
+.env.local
+.env.*.local
+**/kaggle.json
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Docker ---
+*.pid
+
+# --- Misc project scratch ---
+.claude/
+*.docx

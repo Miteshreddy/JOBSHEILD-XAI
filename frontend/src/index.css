@@ -1,0 +1,241 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* ============================================================
+   JOBSHIELD-XAI — Next-Gen Obsidian Dark Design System
+   Inspired by Linear, Framer, Raycast & Vercel
+   Hyper-refined aesthetic: Pitch Obsidian + Prismatic Ultraviolet & Aurora Neon
+   ============================================================ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* ── Deep Obsidian Canvas Layers ── */
+  --color-bg-base:      #030307;
+  --color-bg-surface:   #080711;
+  --color-bg-elevated:  #0e0c1c;
+  --color-bg-card:      rgba(255, 255, 255, 0.025);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.05);
+
+  /* ── Prismatic Brand & Neon Accents ── */
+  --color-brand-violet: #8b5cf6;
+  --color-brand-indigo: #6366f1;
+  --color-brand-fuchsia:#ec4899;
+  --color-brand-cyan:   #06b6d4;
+  --color-brand-emerald:#10b981;
+  --color-brand-rose:   #f43f5e;
+  --color-brand-amber:  #f59e0b;
+
+  /* ── Risk Category Tokens ── */
+  --color-risk-low:         #10b981;
+  --color-risk-low-bg:      #042018;
+  --color-risk-medium:      #f59e0b;
+  --color-risk-medium-bg:   #261605;
+  --color-risk-high:        #f97316;
+  --color-risk-high-bg:     #291104;
+  --color-risk-critical:    #ef4444;
+  --color-risk-critical-bg: #290707;
+
+  /* ── Dynamic Shadows & Glows ── */
+  --shadow-glow-violet:  0 0 60px -10px rgba(139, 92, 246, 0.35);
+  --shadow-glow-indigo:  0 0 60px -10px rgba(99, 102, 241, 0.35);
+  --shadow-glow-fuchsia: 0 0 60px -10px rgba(236, 72, 153, 0.35);
+  --shadow-glow-cyan:    0 0 60px -10px rgba(6, 182, 212, 0.35);
+  --shadow-glow-emerald: 0 0 60px -10px rgba(16, 185, 129, 0.35);
+  --shadow-glow-card:    0 20px 40px -15px rgba(0, 0, 0, 0.7);
+
+  /* ── Animations ── */
+  --animate-aurora:        aurora-flow 18s ease-in-out infinite alternate;
+  --animate-float:         float-subtle 5s ease-in-out infinite;
+  --animate-float-reverse: float-reverse 6s ease-in-out infinite;
+  --animate-pulse-glow:    pulse-glow 3s ease-in-out infinite;
+  --animate-scanline:      laser-scan 3s ease-in-out infinite;
+  --animate-marquee:       infinite-scroll 25s linear infinite;
+  --animate-shimmer:       shimmer-slide 3s linear infinite;
+  --animate-radar:         radar-sweep 4s linear infinite;
+
+  @keyframes aurora-flow {
+    0% { transform: scale(1) translate(0%, 0%) rotate(0deg); opacity: 0.55; }
+    50% { transform: scale(1.15) translate(4%, -3%) rotate(180deg); opacity: 0.75; }
+    100% { transform: scale(1) translate(-3%, 2%) rotate(360deg); opacity: 0.55; }
+  }
+
+  @keyframes float-subtle {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(0.5deg); }
+  }
+
+  @keyframes float-reverse {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(10px) rotate(-0.5deg); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes laser-scan {
+    0% {
+      top: 0%;
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      top: 100%;
+      opacity: 0;
+    }
+  }
+
+  @keyframes infinite-scroll {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes shimmer-slide {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  @keyframes border-beam-anim {
+    0% { offset-distance: 0%; }
+    100% { offset-distance: 100%; }
+  }
+}
+
+/* ── Global Base ── */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    font-feature-settings: 'cv11', 'ss01', 'tnum';
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #030307;
+    color: #f1f5f9;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    selection-background-color: rgba(139, 92, 246, 0.35);
+  }
+
+  ::selection {
+    background: rgba(139, 92, 246, 0.4);
+    color: #ffffff;
+  }
+
+  /* Custom Smooth Scrollbar */
+  ::-webkit-scrollbar {
+    width: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #030307;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
+  }
+}
+
+/* ── Modern Premium Utilities ── */
+@layer utilities {
+  /* Ultra-Fine Glassmorphism */
+  .glass-card {
+    background: rgba(14, 12, 26, 0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(18, 15, 33, 0.8);
+    box-shadow: 0 25px 60px -15px rgba(139, 92, 246, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .glass-pill {
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Radiant Chromatic Gradients */
+  .gradient-heading-aurora {
+    background: linear-gradient(135deg, #ffffff 20%, #e9d5ff 50%, #c084fc 75%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-heading-neon {
+    background: linear-gradient(135deg, #ffffff 15%, #f472b6 45%, #a855f7 70%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-heading-fire {
+    background: linear-gradient(135deg, #ffffff 20%, #fbbf24 50%, #f97316 75%, #ef4444 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Shimmering Button & Border Ray */
+  .shimmer-badge {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(168, 85, 247, 0.2) 50%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-slide 3.5s linear infinite;
+  }
+
+  /* Subtle Cyber Crosshair Dot Pattern */
+  .bg-grid-cyber {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
+
+  .bg-dots-cyber {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Mask Gradient Overlays */
+  .mask-radial-faded {
+    mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+  }
+
+  .mask-linear-edges {
+    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  }
+}

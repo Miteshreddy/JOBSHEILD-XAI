@@ -1,0 +1,80 @@
+{
+  "shape": {
+    "rows": 17880,
+    "columns": 18
+  },
+  "class_balance": {
+    "total": 17880,
+    "legitimate": 17014,
+    "fraudulent": 866,
+    "fraudulent_pct": 4.84
+  },
+  "duplicates": {
+    "full_row_duplicates": 0,
+    "title_description_duplicates": 2093
+  },
+  "missingness_top10": {
+    "salary_range": {
+      "missing_count": 15012,
+      "missing_pct": 83.96
+    },
+    "department": {
+      "missing_count": 11553,
+      "missing_pct": 64.61
+    },
+    "required_education": {
+      "missing_count": 8105,
+      "missing_pct": 45.33
+    },
+    "benefits": {
+      "missing_count": 7220,
+      "missing_pct": 40.38
+    },
+    "required_experience": {
+      "missing_count": 7050,
+      "missing_pct": 39.43
+    },
+    "function": {
+      "missing_count": 6455,
+      "missing_pct": 36.1
+    },
+    "industry": {
+      "missing_count": 4903,
+      "missing_pct": 27.42
+    },
+    "employment_type": {
+      "missing_count": 3471,
+      "missing_pct": 19.41
+    },
+    "company_profile": {
+      "missing_count": 3308,
+      "missing_pct": 18.5
+    },
+    "requirements": {
+      "missing_count": 2698,
+      "missing_pct": 15.09
+    }
+  },
+  "missingness_by_class": [
+    {
+      "field": "company_profile",
+      "missing_pct_legitimate": 15.99,
+      "missing_pct_fraudulent": 67.78
+    },
+    {
+      "field": "salary_range",
+      "missing_pct_legitimate": 84.45,
+      "missing_pct_fraudulent": 74.25
+    },
+    {
+      "field": "benefits",
+      "missing_pct_legitimate": 40.3,
+      "missing_pct_fraudulent": 42.03
+    },
+    {
+      "field": "requirements",
+      "missing_pct_legitimate": 14.95,
+      "missing_pct_fraudulent": 17.78
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  ai_service:
+    build:
+      context: .
+      dockerfile: ai_service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: production
+      MONGODB_URI: mongodb://mongo:27017/fake_job_detection
+      CORS_ALLOWED_ORIGINS: http://localhost:5000,http://localhost
+      OCR_ENGINE: easyocr
+    volumes:
+      # The trained model + SHAP cache are NOT baked into the image (they're
+      # gitignored/dockerignored — multi-GB artifacts don't belong in a
+      # rebuildable image). Train once on the host (see README) — this
+      # volume mount is what lets the container see that output without a
+      # rebuild.
+      - ./ai_service/models_store:/app/ai_service/models_store
+      - ./ai_service/dataset:/app/ai_service/dataset
+      # Without this, the BERT tokenizer re-downloads from huggingface.co on
+      # every fresh container (get_tokenizer() loads it by name, not from
+      # the local model dir) — real added latency and an external network
+      # dependency at cold-start, found by watching a real container start.
+      # Sharing the host's HF cache here means it only ever downloads once.
+      - hf_cache:/root/.cache/huggingface
+    depends_on:
+      - mongo
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/fake_job_detection
+      AI_SERVICE_BASE_URL: http://ai_service:8000
+      # CPU-only inference (no GPU passthrough here) plus a possible
+      # cold-start tokenizer download is genuinely slower than the 30s
+      # default tuned for GPU serving — a real request timed out against
+      # that default when verifying this compose stack end-to-end.
+      AI_SERVICE_TIMEOUT_MS: 90000
+      CORS_ALLOWED_ORIGINS: http://localhost,http://localhost:5173
+      # nginx is exactly one hop in front of this container in this
+      # deployment, so it's correct (and necessary for rate limiting by IP
+      # to work at all) to trust one level of X-Forwarded-For here — see
+      # backend/config/env.js for why this must stay 0 everywhere nothing
+      # is actually proxying.
+      TRUST_PROXY: 1
+      # Dev-only defaults — override via a real .env / secrets manager for
+      # any deployment reachable outside your own machine (see backend/config/env.js).
+      JWT_ACCESS_SECRET: change_me_access_secret_min_32_chars_docker
+      JWT_REFRESH_SECRET: change_me_refresh_secret_min_32_chars_docker
+    depends_on:
+      - mongo
+      - ai_service
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  hf_cache:
