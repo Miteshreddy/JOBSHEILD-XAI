@@ -1,131 +1,110 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { motion } from 'motion/react';
+import { ArrowRight, Building2, ChevronLeft, ChevronRight, FileSearch } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, FileText, Image as ImageIcon, Inbox, Link2, Type } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Alert } from '@/components/ui/Alert';
-import { Select } from '@/components/ui/Select';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Pagination } from '@/components/ui/Pagination';
-import { RiskBadge } from '@/components/dashboard/RiskBadge';
 import { listHistory } from '@/api/analysis';
 import { getApiErrorMessage } from '@/api/client';
-import type { InputType, RiskCategory } from '@/types';
+import { Alert, Badge, Skeleton } from '@/components/ui/Badge';
+import { Button, ButtonLink } from '@/components/ui/Button';
+import { cn } from '@/lib/cn';
+import { VERDICT_COPY } from '@/lib/verdict';
+import type { Verdict } from '@/types';
 
-const RISK_OPTIONS: (RiskCategory | 'All')[] = ['All', 'Low', 'Medium', 'High', 'Critical'];
-const PAGE_SIZE = 20;
-
-const INPUT_ICON: Record<InputType, typeof Type> = {
-  text: Type,
-  url: Link2,
-  pdf: FileText,
-  image: ImageIcon,
-};
+const FILTERS: { id: Verdict | 'all'; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'legitimate', label: 'Legitimate' },
+  { id: 'suspicious', label: 'Needs verification' },
+  { id: 'fraudulent', label: 'Likely scam' },
+];
+const PAGE_SIZE = 10;
+const scoreColor = { safe: 'text-safe', warn: 'text-warn', danger: 'text-danger' } as const;
 
 export function HistoryPage() {
-  const [riskFilter, setRiskFilter] = useState<RiskCategory | 'All'>('All');
+  const [filter, setFilter] = useState<Verdict | 'all'>('all');
   const [page, setPage] = useState(1);
-
-  const { data, isPending, isFetching, error } = useQuery({
-    queryKey: ['history', riskFilter, page],
-    queryFn: () =>
-      listHistory({
-        ...(riskFilter !== 'All' && { riskCategory: riskFilter }),
-        page,
-        limit: PAGE_SIZE,
-      }),
-    placeholderData: (previous) => previous,
+  const { data, error, isPending, isFetching } = useQuery({
+    queryKey: ['history', filter, page],
+    queryFn: () => listHistory({ verdict: filter === 'all' ? undefined : filter, page, limit: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
 
-  function handleRiskFilterChange(value: RiskCategory | 'All') {
-    setRiskFilter(value);
-    setPage(1);
-  }
-
-  const analyses = data?.analyses ?? [];
-  const pagination = data?.pagination;
-
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Analysis History</h1>
-        <Select
-          value={riskFilter}
-          onChange={(e) => handleRiskFilterChange(e.target.value as RiskCategory | 'All')}
-        >
-          {RISK_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt === 'All' ? 'All risk levels' : `${opt} risk`}
-            </option>
-          ))}
-        </Select>
+    <div className="container-page max-w-4xl py-12 sm:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">History</h1>
+          <p className="mt-1.5 text-fg-muted">Every job you’ve checked while signed in.</p>
+        </div>
+        <ButtonLink to="/analyze" size="sm">Check a job</ButtonLink>
       </div>
 
-      {isPending && (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <Card key={i} className="flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-64" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-              <Skeleton className="h-7 w-24 rounded-full" />
-            </Card>
-          ))}
-        </div>
-      )}
-      {error && <Alert variant="error">{getApiErrorMessage(error)}</Alert>}
+      <div className="mt-8 flex flex-wrap gap-1.5" role="tablist" aria-label="Filter by verdict">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            role="tab"
+            aria-selected={filter === f.id}
+            onClick={() => {
+              setFilter(f.id);
+              setPage(1);
+            }}
+            className={cn('rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors', filter === f.id ? 'border-accent/40 bg-accent/10 text-accent' : 'border-line text-fg-muted hover:text-fg')}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-      {!isPending && !error && analyses.length === 0 && (
-        <Card>
-          <EmptyState
-            icon={Inbox}
-            title="No analyses yet"
-            description="Run your first check to see it appear here."
-            action={
-              <Link to="/analyze" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
-                Analyze another job posting
-              </Link>
-            }
-          />
-        </Card>
-      )}
-
-      {!isPending && !error && analyses.length > 0 && (
-        <>
-          <div className="animate-fade-in-up space-y-3">
-            {analyses.map((a) => {
-              const Icon = INPUT_ICON[a.inputType];
-              return (
-                <Link key={a._id} to={`/analyze/${a._id}`}>
-                  <Card className="flex items-center justify-between gap-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-soft-md">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                        <Icon className="h-4 w-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-900 dark:text-white">
-                          {a.sourceReference.length > 80 ? a.sourceReference.slice(0, 80) + '...' : a.sourceReference}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {a.inputType.toUpperCase()} • {new Date(a.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <RiskBadge category={a.riskCategory} />
-                      <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" aria-hidden="true" />
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
+      <div className={cn('mt-6 space-y-2.5 transition-opacity', isFetching && !isPending && 'opacity-60')}>
+        {error && <Alert>{getApiErrorMessage(error)}</Alert>}
+        {isPending && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[84px] rounded-2xl" />)}
+        {data && data.analyses.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-line-strong px-6 py-16 text-center">
+            <FileSearch className="mx-auto size-8 text-fg-subtle" />
+            <p className="mt-4 font-medium">{filter === 'all' ? 'No checks yet' : 'Nothing in this category'}</p>
+            <p className="mt-1 text-sm text-fg-muted">Checks you run while signed in will appear here.</p>
           </div>
-          {pagination && (
-            <Pagination page={pagination.page} pages={pagination.pages} onPageChange={setPage} isFetching={isFetching} />
-          )}
-        </>
+        )}
+        {data?.analyses.map((a, i) => {
+          const v = VERDICT_COPY[a.verdict] ?? VERDICT_COPY.suspicious;
+          return (
+            <motion.div key={a._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+              <Link to={`/report/${a._id}`} className="group flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-line-strong hover:bg-bg-subtle">
+                <span className={cn('w-12 text-center text-2xl font-semibold tabular-nums', scoreColor[v.tone])}>{a.legitimacyScore ?? '–'}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="flex items-center gap-1.5 truncate font-medium">
+                      <Building2 className="size-3.5 text-fg-subtle" />
+                      {a.company?.name ?? 'Unknown employer'}
+                    </p>
+                    <Badge tone={v.tone}>{v.label}</Badge>
+                  </div>
+                  <p className="mt-1 truncate text-[13px] text-fg-muted">{a.summary || a.sourceReference}</p>
+                </div>
+                <div className="hidden text-right text-[12px] text-fg-subtle sm:block">
+                  <p>{a.source?.platform ?? a.inputType}</p>
+                  <p>{new Date(a.createdAt).toLocaleDateString()}</p>
+                </div>
+                <ArrowRight className="size-4 text-fg-subtle transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {data && data.pagination.pages > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} icon={<ChevronLeft className="size-4" />}>
+            Previous
+          </Button>
+          <span className="text-[13px] text-fg-muted">
+            Page {data.pagination.page} of {data.pagination.pages}
+          </span>
+          <Button variant="secondary" size="sm" disabled={page >= data.pagination.pages} onClick={() => setPage((p) => p + 1)}>
+            Next <ChevronRight className="size-4" />
+          </Button>
+        </div>
       )}
     </div>
   );

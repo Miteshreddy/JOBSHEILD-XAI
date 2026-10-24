@@ -1,10 +1,18 @@
-import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
-export function Spinner({ label = 'Loading...' }: { label?: string }) {
+export function Spinner({ className }: { className?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-12 text-slate-500 dark:text-slate-400">
-      <Loader2 className="h-8 w-8 animate-spin text-brand-600" aria-hidden="true" />
-      <span className="text-sm">{label}</span>
+    <svg className={cn('animate-spin', className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PageLoader() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center text-fg-subtle" role="status" aria-label="Loading">
+      <Spinner className="size-5" />
     </div>
   );
 }

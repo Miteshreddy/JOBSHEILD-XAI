@@ -1,195 +1,204 @@
-"""Unified Launcher for Explainable Fake Job Detection Platform (FraudBERT).
+"""JobShield launcher — starts everything and opens the website.
 
-Starts:
-  1. Python FastAPI AI Service (port 8000)
-  2. Node.js / Express Backend (port 5001)
-  3. React Vite Frontend (port 5173)
+    python launch.py            # production build served at http://localhost:5001
+    python launch.py --dev      # also runs the Vite dev server (hot reload) on :5173
 
-Automatically verifies services and opens the browser.
-Press Ctrl+C in this terminal to gracefully stop all services.
-
-The frontend is bound to 0.0.0.0 so it is accessible from any device
-on the same local network (phones, tablets, other PCs).
-
-NOTE: Run setup.bat first before running this script.
+Starts, in order:
+  1. Ollama (local reasoning model), if installed and not already running
+  2. Analysis service  (FastAPI, http://127.0.0.1:8000)
+  3. Web app + API     (Node/Express, http://localhost:5001)
+Press Ctrl+C to stop everything.
 """
+from __future__ import annotations
 
+import argparse
 import os
+import secrets
+import shutil
+import signal
+import subprocess
 import sys
 import time
-import socket
-import subprocess
+import urllib.request
 import webbrowser
 from pathlib import Path
-import urllib.request
-import urllib.error
 
-ROOT_DIR = Path(__file__).resolve().parent
-AI_DIR = ROOT_DIR / "ai_service"
-BACKEND_DIR = ROOT_DIR / "backend"
-FRONTEND_DIR = ROOT_DIR / "frontend"
+ROOT = Path(__file__).resolve().parent
+AI_DIR = ROOT / "ai_service"
+BACKEND_DIR = ROOT / "backend"
+FRONTEND_DIR = ROOT / "frontend"
+IS_WINDOWS = os.name == "nt"
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
+APP_URL = "http://localhost:5001"
 
-def check_port(port: int, host: str = "127.0.0.1") -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(1.0)
-        return s.connect_ex((host, port)) == 0
+children: list[subprocess.Popen] = []
 
-def wait_for_url(url: str, timeout: int = 45, interval: float = 1.0) -> bool:
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "HealthChecker/1.0"})
-            with urllib.request.urlopen(req, timeout=2) as resp:
-                if resp.status in (200, 304):
-                    return True
-        except Exception:
-            pass
-        time.sleep(interval)
-    return False
 
-def get_python_exe() -> str:
-    """Returns the venv python (preferred) or falls back to the system python."""
-    venv_win = AI_DIR / ".venv" / "Scripts" / "python.exe"
-    venv_unix = AI_DIR / ".venv" / "bin" / "python"
-    if venv_win.exists():
-        return str(venv_win)
-    if venv_unix.exists():
-        return str(venv_unix)
-    # Fall back to the system interpreter that launched this script.
+def say(msg: str) -> None:
+    print(f"  {msg}", flush=True)
+
+
+def venv_python() -> str:
+    for candidate in (AI_DIR / ".venv" / "Scripts" / "python.exe", AI_DIR / ".venv" / "bin" / "python"):
+        if candidate.exists():
+            return str(candidate)
     return sys.executable
 
 
-def get_local_ip() -> str:
-    """Best-effort LAN IP address for the current machine."""
+def npm() -> str:
+    return "npm.cmd" if IS_WINDOWS else "npm"
+
+
+def is_up(url: str, timeout: float = 2.0) -> bool:
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return resp.status < 500
     except Exception:
-        return "<your-local-ip>"
+        return False
 
-def ensure_env_files():
-    # Backend .env
+
+def wait_for(url: str, seconds: int) -> bool:
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if is_up(url):
+            return True
+        time.sleep(1)
+    return False
+
+
+def spawn(cmd: list[str], cwd: Path, log_name: str, env: dict | None = None) -> subprocess.Popen:
+    logs = ROOT / "logs"
+    logs.mkdir(exist_ok=True)
+    log = open(logs / log_name, "a", encoding="utf-8")
+    flags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WINDOWS else 0
+    proc = subprocess.Popen(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, env={**os.environ, **(env or {})}, creationflags=flags)
+    children.append(proc)
+    return proc
+
+
+def ensure_env_files() -> None:
     backend_env = BACKEND_DIR / ".env"
-    backend_example = BACKEND_DIR / ".env.example"
-    if not backend_env.exists() and backend_example.exists():
-        backend_env.write_text(backend_example.read_text(encoding="utf-8"), encoding="utf-8")
-        print("[SETUP] Created backend/.env from .env.example")
-
-    # AI Service .env
+    if not backend_env.exists():
+        text = (BACKEND_DIR / ".env.example").read_text(encoding="utf-8")
+        text = text.replace("change_me_access_secret_min_32_chars", secrets.token_hex(32))
+        text = text.replace("change_me_refresh_secret_min_32_chars", secrets.token_hex(32))
+        backend_env.write_text(text, encoding="utf-8")
+        say("Created backend/.env with fresh secrets")
     ai_env = AI_DIR / ".env"
-    ai_example = AI_DIR / ".env.example"
-    if not ai_env.exists() and ai_example.exists():
-        ai_env.write_text(ai_example.read_text(encoding="utf-8"), encoding="utf-8")
-        print("[SETUP] Created ai_service/.env from .env.example")
+    if not ai_env.exists():
+        shutil.copy(AI_DIR / ".env.example", ai_env)
+        say("Created ai_service/.env")
 
-def main():
-    print("=" * 65)
-    print("  🛡️  EXPLAINABLE FAKE JOB DETECTION PLATFORM (FraudBERT)")
-    print("=" * 65)
 
-    ensure_env_files()
+def find_ollama() -> str | None:
+    found = shutil.which("ollama")
+    if found:
+        return found
+    if IS_WINDOWS:
+        default = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama.exe"
+        if default.exists():
+            return str(default)
+    return None
 
-    python_exe = get_python_exe()
-    print(f"[INFO] Using Python: {python_exe}")
 
-    processes = []
-    env_ai = os.environ.copy()
-    env_ai["PYTHONPATH"] = str(ROOT_DIR)
-    env_ai["PYTHONUNBUFFERED"] = "1"
-
-    # Detect backend port from backend/.env if configured
-    backend_port = 5001
-    backend_env_file = BACKEND_DIR / ".env"
-    if backend_env_file.exists():
-        for line in backend_env_file.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("PORT="):
-                try:
-                    backend_port = int(line.strip().split("=", 1)[1].strip())
-                except ValueError:
-                    pass
-
+def start_ollama() -> None:
+    if is_up("http://localhost:11434/api/version"):
+        say("Ollama ............ already running")
+    else:
+        exe = find_ollama()
+        if not exe:
+            say("Ollama ............ NOT INSTALLED — reasoning disabled (run setup again to install it)")
+            return
+        spawn([exe, "serve"], ROOT, "ollama.log")
+        if not wait_for("http://localhost:11434/api/version", 30):
+            say("Ollama ............ failed to start (see logs/ollama.log) — reasoning disabled")
+            return
+        say("Ollama ............ started")
     try:
-        # 1. Start AI Service (if uvicorn is available)
-        has_uvicorn = False
-        try:
-            res = subprocess.run([python_exe, "-c", "import uvicorn"], capture_output=True)
-            has_uvicorn = (res.returncode == 0)
-        except Exception:
-            pass
+        with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=5) as resp:
+            installed = OLLAMA_MODEL.encode() in resp.read()
+    except Exception:
+        installed = False
+    if not installed:
+        exe = find_ollama()
+        if exe:
+            say(f"Reasoning model ... downloading {OLLAMA_MODEL} in the background (~3 GB); checks run without it until it finishes")
+            spawn([exe, "pull", OLLAMA_MODEL], ROOT, "ollama-pull.log")
+    else:
+        say(f"Reasoning model ... {OLLAMA_MODEL} ready")
 
-        if has_uvicorn:
-            print("[1/3] Starting FastAPI AI Service on port 8000...")
-            p_ai = subprocess.Popen(
-                [python_exe, "-u", "-m", "uvicorn", "ai_service.app:app", "--host", "127.0.0.1", "--port", "8000"],
-                cwd=str(ROOT_DIR),
-                env=env_ai,
-            )
-            processes.append(("AI Service", p_ai))
-        else:
-            print("[1/3] Python AI Service skipped (install torch & uvicorn to enable AI analysis).")
 
-        # 2. Start Backend Service
-        print(f"[2/3] Starting Express Backend Service on port {backend_port}...")
-        npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
-        p_backend = subprocess.Popen(
-            [npm_cmd, "run", "dev"],
-            cwd=str(BACKEND_DIR),
-        )
-        processes.append(("Backend", p_backend))
+def build_frontend_if_needed() -> None:
+    if (FRONTEND_DIR / "dist" / "index.html").exists():
+        return
+    say("Building the website (first run only)...")
+    subprocess.run([npm(), "run", "build"], cwd=FRONTEND_DIR, check=True)
 
-        # 3. Start Frontend Service
-        # Bind to 0.0.0.0 so the site is reachable from any device on the
-        # local network (phones, tablets, other PCs — not just localhost).
-        # The healthcheck still uses 127.0.0.1 which works because loopback
-        # always maps to the same listener.
-        print("[3/3] Starting Vite Frontend on port 5173 (all interfaces)...")
-        p_frontend = subprocess.Popen(
-            [npm_cmd, "run", "dev", "--", "--host", "0.0.0.0"],
-            cwd=str(FRONTEND_DIR),
-        )
-        processes.append(("Frontend", p_frontend))
 
-        print("\n[WAIT] Waiting for all services to initialize...")
-        ai_ok = wait_for_url("http://127.0.0.1:8000/health", timeout=10) if has_uvicorn else False
-        backend_ok = wait_for_url(f"http://127.0.0.1:{backend_port}/api/health", timeout=25)
-        frontend_ok = wait_for_url("http://127.0.0.1:5173", timeout=20)
-
-        local_ip = get_local_ip()
-        print("\n" + "=" * 65)
-        print("  🎉 ALL SERVICES ARE RUNNING!")
-        print("=" * 65)
-        print(f"  👉 Web Application (this machine):  http://localhost:5173  [{'ONLINE' if frontend_ok else 'STARTING'}]")
-        print(f"  👉 Web Application (other devices): http://{local_ip}:5173")
-        print(f"  👉 Backend API Docs:  http://localhost:{backend_port}/api-docs [{'ONLINE' if backend_ok else 'STARTING'}]")
-        if has_uvicorn:
-            print(f"  👉 AI Service Docs:   http://localhost:8000/docs     [{'ONLINE' if ai_ok else 'STARTING'}]")
-        print("=" * 65)
-        print("\nOpening web browser at http://localhost:5173 ...")
-        webbrowser.open("http://localhost:5173")
-
-        print("\nPress Ctrl+C at any time to stop all services.\n")
-
-        # Keep alive until Ctrl+C
-        while True:
-            for name, proc in processes:
-                poll = proc.poll()
-                if poll is not None:
-                    print(f"[WARN] {name} exited unexpectedly with code {poll}")
-            time.sleep(2)
-
-    except KeyboardInterrupt:
-        print("\n[SHUTDOWN] Stopping all services...")
-    finally:
-        for name, proc in processes:
-            if proc.poll() is None:
-                print(f"[SHUTDOWN] Terminating {name}...")
-                try:
+def shutdown(*_args) -> None:
+    print("\n  Stopping JobShield...", flush=True)
+    for proc in reversed(children):
+        if proc.poll() is None:
+            try:
+                if IS_WINDOWS:
+                    proc.send_signal(signal.CTRL_BREAK_EVENT)
+                else:
                     proc.terminate()
-                    proc.wait(timeout=3)
-                except Exception:
-                    proc.kill()
-        print("[SHUTDOWN] All services stopped cleanly.")
+                proc.wait(timeout=8)
+            except Exception:
+                proc.kill()
+    sys.exit(0)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dev", action="store_true", help="also run the Vite dev server on :5173")
+    parser.add_argument("--no-browser", action="store_true")
+    args = parser.parse_args()
+
+    print("\n  JobShield\n  ---------")
+    ensure_env_files()
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    start_ollama()
+
+    if is_up("http://127.0.0.1:8000/health"):
+        say("Analysis service .. already running")
+    else:
+        spawn([venv_python(), "-m", "uvicorn", "ai_service.app:app", "--host", "127.0.0.1", "--port", "8000"], ROOT, "ai_service.log", {"PYTHONPATH": str(ROOT)})
+        ok = wait_for("http://127.0.0.1:8000/health", 120)
+        say("Analysis service .. " + ("ready" if ok else "still starting (see logs/ai_service.log)"))
+
+    if not args.dev:
+        build_frontend_if_needed()
+    if is_up(f"{APP_URL}/api/health"):
+        say("Web app ........... already running")
+    else:
+        spawn(["node", "server.js"], BACKEND_DIR, "backend.log")
+        # First run downloads an embedded MongoDB (~70 MB), so allow time.
+        ok = wait_for(f"{APP_URL}/api/health", 240)
+        say("Web app ........... " + ("ready" if ok else "failed to start (see logs/backend.log)"))
+        if not ok:
+            shutdown()
+
+    url = APP_URL
+    if args.dev:
+        spawn([npm(), "run", "dev", "--", "--port", "5173"], FRONTEND_DIR, "frontend.log")
+        wait_for("http://localhost:5173", 60)
+        url = "http://localhost:5173"
+
+    print(f"\n  JobShield is running at {url}\n  Logs are in the logs/ folder. Press Ctrl+C to stop.\n", flush=True)
+    if not args.no_browser:
+        webbrowser.open(url)
+
+    while True:
+        time.sleep(2)
+        for proc in children:
+            if proc.poll() is not None and proc.args[-1] != OLLAMA_MODEL and "pull" not in proc.args:
+                say(f"A service exited unexpectedly ({' '.join(map(str, proc.args[:3]))}). Check the logs/ folder.")
+                shutdown()
+
 
 if __name__ == "__main__":
     main()

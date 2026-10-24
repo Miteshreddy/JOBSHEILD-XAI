@@ -1,0 +1,193 @@
+{
+  "version": "v2-20261024T072134Z",
+  "base_model": "distilbert-base-uncased",
+  "parameters": 66955010,
+  "max_length": 128,
+  "ensemble_weight_transformer": 0.1,
+  "decision_threshold": 0.425,
+  "validation_f1": 0.8803,
+  "test_metrics": {
+    "ensemble": {
+      "accuracy": 0.9828,
+      "precision": 0.7769,
+      "recall": 0.8783,
+      "f1": 0.8245,
+      "roc_auc": 0.9943,
+      "pr_auc": 0.927,
+      "confusion_matrix": [
+        [
+          2354,
+          29
+        ],
+        [
+          14,
+          101
+        ]
+      ],
+      "n": 2498,
+      "positives": 115
+    },
+    "transformer_only@0.5": {
+      "accuracy": 0.976,
+      "precision": 0.7778,
+      "recall": 0.6696,
+      "f1": 0.7196,
+      "roc_auc": 0.948,
+      "pr_auc": 0.7678,
+      "confusion_matrix": [
+        [
+          2361,
+          22
+        ],
+        [
+          38,
+          77
+        ]
+      ],
+      "n": 2498,
+      "positives": 115
+    },
+    "lexical_only@0.5": {
+      "accuracy": 0.982,
+      "precision": 0.7734,
+      "recall": 0.8609,
+      "f1": 0.8148,
+      "roc_auc": 0.9944,
+      "pr_auc": 0.9297,
+      "confusion_matrix": [
+        [
+          2354,
+          29
+        ],
+        [
+          16,
+          99
+        ]
+      ],
+      "n": 2498,
+      "positives": 115
+    },
+    "by_source": {
+      "emscad": {
+        "accuracy": 0.9793,
+        "precision": 0.76,
+        "recall": 0.8028,
+        "f1": 0.7808,
+        "roc_auc": 0.9917,
+        "pr_auc": 0.8925,
+        "confusion_matrix": [
+          [
+            1458,
+            18
+          ],
+          [
+            14,
+            57
+          ]
+        ],
+        "n": 1547,
+        "positives": 71
+      },
+      "india_posts": {
+        "accuracy": 0.8305,
+        "precision": 0.7872,
+        "recall": 1.0,
+        "f1": 0.881,
+        "roc_auc": 0.9631,
+        "pr_auc": 0.9814,
+        "confusion_matrix": [
+          [
+            12,
+            10
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        "n": 59,
+        "positives": 37
+      },
+      "linkedin": {
+        "accuracy": 0.9989,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "roc_auc": null,
+        "pr_auc": null,
+        "confusion_matrix": [
+          [
+            884,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "n": 885,
+        "positives": 0
+      },
+      "tech_scams": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "roc_auc": null,
+        "pr_auc": null,
+        "confusion_matrix": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            7
+          ]
+        ],
+        "n": 7,
+        "positives": 7
+      }
+    }
+  },
+  "data_summary": {
+    "duplicates_removed": 2711,
+    "train": {
+      "rows": 22182,
+      "fraudulent": 1009,
+      "by_source": {
+        "emscad": 12369,
+        "linkedin": 7077,
+        "emscad_excerpt": 1325,
+        "linkedin_excerpt": 829,
+        "india_posts": 477,
+        "tech_scams": 58,
+        "synthetic": 47
+      }
+    },
+    "val": {
+      "rows": 2498,
+      "fraudulent": 116,
+      "by_source": {
+        "emscad": 1546,
+        "linkedin": 884,
+        "india_posts": 60,
+        "tech_scams": 8
+      }
+    },
+    "test": {
+      "rows": 2498,
+      "fraudulent": 115,
+      "by_source": {
+        "emscad": 1547,
+        "linkedin": 885,
+        "india_posts": 59,
+        "tech_scams": 7
+      }
+    }
+  },
+  "epochs": 1,
+  "transformer_train_rows": 13000,
+  "frozen_layers": 3,
+  "trained_at": "2026-10-24T07:21:34.035487+00:00"
+}

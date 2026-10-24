@@ -2,10 +2,16 @@
 ai_service/dataset/*.csv
 ai_service/dataset/*.json
 ai_service/dataset/processed/
+ai_service/dataset/processed_v2/
+ai_service/dataset/raw/
 # Note: docs/eda/ (report + charts) IS committed intentionally — it's small,
 # reviewable documentation of real analysis, not a bulk data artifact.
 ai_service/models_store/**
 !ai_service/models_store/.gitkeep
+# The trained classifier ships with the repo (int8 ONNX, ~67 MB) so nobody
+# has to train anything to run JobShield.
+!ai_service/models_store/classifier/
+!ai_service/models_store/classifier/**
 ai_service/**/runs/
 ai_service/**/*.pt
 ai_service/**/*.bin
@@ -27,6 +33,10 @@ ENV/
 htmlcov/
 .coverage
 .coverage.*
+
+# --- Embedded database & test coverage ---
+backend/.data/
+backend/coverage/
 
 # --- Node / JS ---
 node_modules/

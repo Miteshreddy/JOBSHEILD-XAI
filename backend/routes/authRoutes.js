@@ -1,7 +1,7 @@
 const express = require("express");
 const { body } = require("express-validator");
 const validate = require("../middleware/validate");
-const { authLimiter } = require("../middleware/rateLimiter");
+const { authLimiter, refreshLimiter } = require("../middleware/rateLimiter");
 const { requireAuth } = require("../middleware/auth");
 const authController = require("../controllers/authController");
 
@@ -84,7 +84,7 @@ router.post(
  *       200: { description: Returns a new access token; rotates the refresh cookie. }
  *       401: { description: Refresh token missing, invalid, expired, or revoked. }
  */
-router.post("/refresh", authLimiter, authController.refresh);
+router.post("/refresh", refreshLimiter, authController.refresh);
 
 /**
  * @openapi

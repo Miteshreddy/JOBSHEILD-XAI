@@ -1,130 +1,120 @@
-"""Module 7 (global half) — SHAP global feature importance (SRS FR-8.1, FR-8.3,
-FR-8.4, NFR-2).
+"""SHAP explanations for the text classifier.
 
-NFR-2: SHAP is markedly more expensive than LIME, so this is precomputed once
-(`python -m ai_service.xai.shap_explainer`) against a sample of held-out
-advertisements and cached to disk alongside the model version that produced
-it — never recomputed synchronously inside a request. `get_cached_global_explanation`
-is what the FastAPI service actually calls at serving time.
+Local (per posting, used in every report): Shapley-value attribution of the
+classifier's fraud probability to the words of the posting, computed with
+SHAP's Partition explainer over a word-level text masker. The values are
+additive — base rate + sum(word contributions) = the classifier's score — so
+the report can say exactly how far each word moved the prediction.
 
-Word-level (not WordPiece-subtoken) masking is used deliberately: shap's
-default `Text` masker splits on word boundaries, which keeps the ranked
-features human-readable words per FR-8.4 rather than BERT subword pieces
-like "##ing".
+Global (precomputed once per model version):
+`python -m ai_service.xai.shap_explainer` averages local SHAP values over a
+balanced sample of held-out postings and caches the words the model relies
+on most, overall, next to the model artifact.
 """
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
-from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
-from ai_service.bert_model.predict import resolve_current_model_dir, predict_proba_batch
-from ai_service.preprocessing.text_cleaning import FIELD_ORDER, build_combined_text
+from ai_service.bert_model.predict import predict_proba_batch, resolve_current_model_dir
 
-CLASS_NAMES = ["legitimate", "fraudulent"]
-DEFAULT_SAMPLE_SIZE = 40
-DEFAULT_TOP_N = 25
 CACHE_FILENAME = "shap_global_importance.json"
-
-# A word/token that appears in only one sampled advertisement can still get a
-# large SHAP magnitude (e.g. a rare identifier or a data-quality artifact
-# from an individual posting) without being a genuine *global* pattern —
-# discovered by inspecting real cached output, where every top-ranked
-# "feature" had occurrences=1 (nonsense tokens like raw hex-looking strings,
-# not words that actually recur across postings). Requiring a minimum repeat
-# count is what makes this a population-level explanation (FR-8.1) rather
-# than an accidental per-instance outlier.
-MIN_OCCURRENCES_FOR_GLOBAL_RANKING = 2
-
-PROCESSED_DIR = Path(__file__).resolve().parents[1] / "dataset" / "processed"
+DEFAULT_MAX_EVALS = 300
+WORD_RE = re.compile(r"[a-z][a-z'\-]{2,}")
+# Function words carry no meaning on their own; attributions to them are
+# real but unhelpful to a reader.
+STOPWORDS = set(
+    "the and for with you your our are was were this that from have has had will would can could should into onto "
+    "about over under than then them they their there here what when where which while who whom why how all any "
+    "each few more most other some such only own same very just also not but nor its it's we're you'll you're per "
+    "been being does did doing out off again further once both too".split()
+)
 
 
-def _sample_texts(n: int) -> list[str]:
-    df = pd.read_csv(PROCESSED_DIR / "test.csv")
-    # Balanced sample: fraud is only ~4.85% of the data (docs/eda/eda_report.md);
-    # an unstratified sample would barely include any fraudulent examples, and
-    # "which words drive *fraud* predictions" needs enough fraudulent examples
-    # to say anything meaningful.
-    half = n // 2
-    fraud_sample = df[df.fraudulent == 1].sample(n=min(half, (df.fraudulent == 1).sum()), random_state=42)
-    legit_sample = df[df.fraudulent == 0].sample(n=n - len(fraud_sample), random_state=42)
-    combined = pd.concat([fraud_sample, legit_sample])
-
-    return [
-        build_combined_text({field: record.get(field) for field in FIELD_ORDER})
-        for record in combined.to_dict(orient="records")
-    ]
+def _fraud_prob(texts) -> np.ndarray:
+    return predict_proba_batch(texts)[:, 1]
 
 
-def compute_global_shap_importance(sample_texts: list[str], top_n: int = DEFAULT_TOP_N) -> dict:
+def _masker():
     import shap
 
-    masker = shap.maskers.Text()
-    explainer = shap.Explainer(predict_proba_batch, masker, output_names=CLASS_NAMES)
-    shap_values = explainer(sample_texts)
+    # Split on non-word characters so attributions are whole words, not
+    # WordPiece fragments like "##ing".
+    return shap.maskers.Text(r"\W+")
 
-    word_scores: dict[str, list[float]] = defaultdict(list)
-    for i in range(len(sample_texts)):
-        words = shap_values.data[i]
-        fraud_contribs = shap_values.values[i][:, 1]
-        for word, value in zip(words, fraud_contribs):
-            normalized = word.strip().lower()
-            if normalized:
-                word_scores[normalized].append(float(value))
 
-    min_occurrences = MIN_OCCURRENCES_FOR_GLOBAL_RANKING
-    qualifying = {w: v for w, v in word_scores.items() if len(v) >= min_occurrences}
-    if not qualifying:
-        # Tiny sample (e.g. a handful of texts in a test) — fall back rather
-        # than returning an empty explanation.
-        qualifying = word_scores
+def _aggregate(tokens, values) -> dict[str, float]:
+    scores: dict[str, float] = defaultdict(float)
+    for token, value in zip(tokens, values):
+        word = str(token).strip().strip("-'").lower()
+        if WORD_RE.fullmatch(word) and word not in STOPWORDS:
+            scores[word] += float(value)
+    return scores
 
-    ranked = sorted(
-        (
-            {
-                "feature": word,
-                "mean_impact": float(np.mean(values)),
-                "mean_abs_impact": float(np.mean(np.abs(values))),
-                "occurrences": len(values),
-            }
-            for word, values in qualifying.items()
-        ),
-        key=lambda row: row["mean_abs_impact"],
-        reverse=True,
-    )[:top_n]
 
+def explain_prediction(text: str, max_evals: int = DEFAULT_MAX_EVALS, top_k: int = 12) -> dict:
+    """Per-posting SHAP explanation: base rate, final score, and the words
+    that moved the score the most (positive = toward scam)."""
+    import shap
+
+    explainer = shap.Explainer(_fraud_prob, _masker())
+    explanation = explainer([text], max_evals=max_evals, batch_size=32, silent=True)
+    tokens = explanation.data[0]
+    values = np.asarray(explanation.values[0]).reshape(len(tokens), -1)[:, 0]
+    base = float(np.asarray(explanation.base_values).reshape(-1)[0])
+
+    scores = _aggregate(tokens, values)
+    ranked = sorted(scores.items(), key=lambda kv: abs(kv[1]), reverse=True)
+    words = [{"term": w, "weight": round(v, 4)} for w, v in ranked if abs(v) >= 0.002][:top_k]
     return {
-        "type": "shap_global",
-        "target_class": "fraudulent",
-        "features": ranked,
-        "sample_size": len(sample_texts),
+        "method": "shap",
+        "baseValue": round(base, 4),
+        "outputValue": round(base + float(values.sum()), 4),
+        "words": words,
     }
 
 
-def precompute_and_cache(sample_size: int = DEFAULT_SAMPLE_SIZE, top_n: int = DEFAULT_TOP_N) -> Path:
-    version_dir = resolve_current_model_dir()
-    texts = _sample_texts(sample_size)
-    importance = compute_global_shap_importance(texts, top_n=top_n)
+# --- Global ------------------------------------------------------------------
 
-    cache_path = version_dir / CACHE_FILENAME
-    cache_path.write_text(json.dumps(importance, indent=2))
-    return cache_path
+def compute_global_importance(texts: list[str], top_n: int = 25, max_evals: int = 200) -> dict:
+    per_word: dict[str, list[float]] = defaultdict(list)
+    for text in texts:
+        local = explain_prediction(text, max_evals=max_evals, top_k=60)
+        for item in local["words"]:
+            per_word[item["term"]].append(item["weight"])
+    recurring = {w: v for w, v in per_word.items() if len(v) >= 2} or per_word
+    ranked = sorted(
+        ({"term": w, "meanImpact": float(np.mean(v)), "occurrences": len(v)} for w, v in recurring.items()),
+        key=lambda r: abs(r["meanImpact"]) * np.log1p(r["occurrences"]),
+        reverse=True,
+    )[:top_n]
+    return {"method": "shap_global", "sampleSize": len(texts), "words": ranked}
 
 
-def get_cached_global_explanation() -> dict:
-    version_dir = resolve_current_model_dir()
-    cache_path = version_dir / CACHE_FILENAME
-    if not cache_path.exists():
-        raise FileNotFoundError(
-            f"No cached SHAP global explanation at {cache_path}. "
-            "Run `python -m ai_service.xai.shap_explainer` after training."
-        )
-    return json.loads(cache_path.read_text())
+def precompute_and_cache(sample_size: int = 40) -> str:
+    import pandas as pd
+
+    from ai_service.dataset.build_training_corpus import OUT_DIR
+
+    df = pd.read_csv(OUT_DIR / "test.csv").dropna(subset=["text"])
+    half = sample_size // 2
+    sample = pd.concat([
+        df[df.label == 1].sample(n=min(half, int(df.label.sum())), random_state=42),
+        df[df.label == 0].sample(n=half, random_state=42),
+    ])
+    importance = compute_global_importance(sample.text.astype(str).tolist())
+    path = resolve_current_model_dir() / CACHE_FILENAME
+    path.write_text(json.dumps(importance, indent=2))
+    return str(path)
+
+
+def get_cached_global_explanation() -> dict | None:
+    path = resolve_current_model_dir() / CACHE_FILENAME
+    return json.loads(path.read_text()) if path.exists() else None
 
 
 if __name__ == "__main__":
-    path = precompute_and_cache()
-    print(f"Cached global SHAP importance to {path}")
+    print(f"Cached global SHAP importance to {precompute_and_cache()}")

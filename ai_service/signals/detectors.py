@@ -58,7 +58,7 @@ def _full_text(fields: dict) -> str:
 
 
 def detect_registration_fee_requested(fields: dict) -> bool:
-    return bool(_REGISTRATION_FEE_RE.search(_full_text(fields)))
+    return _positive_mentions(_REGISTRATION_FEE_RE, _full_text(fields))
 
 
 def extract_email_domain(fields: dict) -> str | None:
@@ -155,6 +155,57 @@ def detect_unverified_website_or_email(fields: dict) -> bool:
     return not has_website and not has_official_email
 
 
+# --- Modern scam patterns (post-2020 formats EMSCAD predates) -----------------
+
+_NEGATION_RE = re.compile(r"\b(no|never|not|without|zero|free of|don'?t|doesn'?t|won'?t)\b[^.!?\n]{0,40}$", re.IGNORECASE)
+_MONEY_MOVEMENT_RE = re.compile(
+    r"(deposit (?:the |a |this )?(?:check|cheque)|(?:check|cheque) (?:will be |to be )?(?:mailed|sent|issued)"
+    r"|purchase (?:your |the )?(?:equipment|laptop|devices?) (?:from|through|via) (?:our|the) (?:vendor|supplier|merchant)"
+    r"|buy (?:gift ?cards?|itunes|google play cards?)|(?:usdt|bitcoin|btc|crypto(?:currency)?) (?:wallet|deposit|payment|salary|payroll)"
+    r"|(?:receive|transfer|move|forward|process) (?:funds|payments|money) (?:through|via|using|into|from) your (?:own |personal )?(?:bank )?account"
+    r"|reship|re-ship|parcels? (?:to|at) your (?:home|residence|address)|package (?:forwarding|inspector)"
+    r"|top[- ]?up (?:your|the) (?:account|wallet)|prepaid tasks?|commission (?:per|for each) task|recharge (?:your|the) account)",
+    re.IGNORECASE,
+)
+_SENSITIVE_INFO_RE = re.compile(
+    r"(social security (?:number)?|\bssn\b|bank (?:account )?(?:details|login|password|credentials)|online banking (?:login|password)"
+    r"|copy of (?:your )?(?:passport|driver'?s licen[cs]e|id card)|aadhaar|pan card|otp|one[- ]time password|credit card (?:number|details))",
+    re.IGNORECASE,
+)
+_TASK_SCAM_RE = re.compile(
+    r"((?:like|rate|review|subscribe to)\s+(?:youtube )?(?:videos|products|hotels|apps|restaurants)\b.{0,60}(?:earn|paid|commission|\$|₹|rs)"
+    r"|(?:earn|make) .{0,30}(?:per|a|each) (?:task|like|review|click))",
+    re.IGNORECASE,
+)
+_CHAT_INTERVIEW_RE = re.compile(r"(interview|onboarding|hr|recruiter|manager)[^.\n]{0,60}\b(telegram|whats\s?app|signal|wechat|google hangouts|wire app)\b|\b(telegram|whats\s?app|signal)\b[^.\n]{0,60}(interview|onboarding|hr|recruiter|manager)", re.IGNORECASE)
+
+
+def _positive_mentions(regex: re.Pattern, text: str) -> bool:
+    """True if any match is not immediately negated ("we never charge a fee")."""
+    for match in regex.finditer(text):
+        if not _NEGATION_RE.search(text[max(0, match.start() - 60) : match.start()]):
+            return True
+    return False
+
+
+def detect_money_movement_request(fields: dict) -> bool:
+    return _positive_mentions(_MONEY_MOVEMENT_RE, _full_text(fields))
+
+
+def detect_sensitive_info_request(fields: dict) -> bool:
+    text = _full_text(fields)
+    asks = re.search(r"\b(send|provide|share|submit|upload|enter|need|require)\b", text, re.IGNORECASE)
+    return bool(asks) and _positive_mentions(_SENSITIVE_INFO_RE, text)
+
+
+def detect_task_based_scam(fields: dict) -> bool:
+    return bool(_TASK_SCAM_RE.search(_full_text(fields)))
+
+
+def detect_chat_app_interview(fields: dict) -> bool:
+    return bool(_CHAT_INTERVIEW_RE.search(_full_text(fields)))
+
+
 def detect_all_signals(fields: dict) -> dict[str, bool]:
     """Compute every detector once; both Trust and Severity engines consume
     this same dict so the two scores are always derived from identical
@@ -170,4 +221,8 @@ def detect_all_signals(fields: dict) -> dict[str, bool]:
         "poor_grammar_or_spam_wording": detect_poor_grammar_or_spam_wording(fields),
         "urgent_or_spam_wording": detect_urgent_or_spam_wording(fields),
         "unverified_website_or_email": detect_unverified_website_or_email(fields),
+        "money_movement_request": detect_money_movement_request(fields),
+        "sensitive_info_request": detect_sensitive_info_request(fields),
+        "task_based_scam": detect_task_based_scam(fields),
+        "chat_app_interview": detect_chat_app_interview(fields),
     }

@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
@@ -19,7 +21,19 @@ function createApp() {
 
   app.set("trust proxy", env.trustProxy);
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          // Employer logos come from Google's favicon service; uploads preview as blob: URLs.
+          "img-src": ["'self'", "data:", "blob:", "https://www.google.com", "https://*.gstatic.com"],
+          // Served over plain http on localhost; upgrading would break assets in some browsers.
+          "upgrade-insecure-requests": null,
+        },
+      },
+    })
+  );
   app.use(compression());
   app.use(
     cors({
@@ -34,11 +48,19 @@ function createApp() {
       stream: { write: (message) => logger.info(message.trim()) },
     })
   );
-  app.use(generalLimiter);
+  // Only the API is rate-limited — static website files must never count.
+  app.use("/api", generalLimiter);
   app.use(attachUserIfPresent);
 
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   app.use("/api", routes);
+
+  // Serve the built website (frontend/dist) so one local URL hosts everything.
+  const distDir = path.resolve(__dirname, "../frontend/dist");
+  if (fs.existsSync(path.join(distDir, "index.html"))) {
+    app.use(express.static(distDir, { index: false, maxAge: "1h" }));
+    app.get(/^\/(?!api\/|api$|api-docs).*/, (_req, res) => res.sendFile(path.join(distDir, "index.html")));
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

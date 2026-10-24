@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import type { Analysis, PaginatedHistory, RiskCategory } from '@/types';
+import type { Analysis, PaginatedHistory, Verdict } from '@/types';
 
 export async function submitText(text: string) {
   const res = await apiClient.post<Analysis>('/analyze/text', { text });
@@ -26,8 +26,8 @@ export async function getAnalysisById(id: string) {
 }
 
 export interface HistoryParams {
-  riskCategory?: RiskCategory;
-  sortBy?: 'createdAt' | 'riskCategory';
+  verdict?: Verdict;
+  sortBy?: 'createdAt' | 'legitimacyScore';
   order?: 'asc' | 'desc';
   page?: number;
   limit?: number;

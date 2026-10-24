@@ -5,7 +5,7 @@ export interface AdminStats {
   totalUsers: number;
   totalAnalyses: number;
   riskCategoryCounts: Record<'Low' | 'Medium' | 'High' | 'Critical', number>;
-  predictionLabelCounts: Record<'fraudulent' | 'legitimate', number>;
+  verdictCounts: Record<'legitimate' | 'suspicious' | 'fraudulent', number>;
 }
 
 export async function getAdminStats() {

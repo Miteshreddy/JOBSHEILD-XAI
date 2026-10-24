@@ -23,10 +23,18 @@ REGISTRATION_FEE_PHRASES = [
     r"joining\s*fee",
     r"advance\s*payment",
     r"one[\s-]?time\s*payment\s*required",
+    r"(?:onboarding|verification|kit|uniform|certificate|visa\s*processing|medical\s*test|id\s*card)\s*(?:fee|charges?)",
+    r"starter\s*kit",
+    r"pay\s+(?:rs\.?|inr|₹|\$|usd|ngn|php|aed)\s?[\d,]+\s*(?:to|for|as)",
+    r"refundable\s*(?:amount|charges?)",
 ]
 
 WHATSAPP_KEYWORDS = [
     r"whatsapp\s*only",
+    r"telegram\s*(?:only|@|id|handle)",
+    r"(?:contact|message|text|add)\s*(?:us\s*|me\s*|our\s*\w+\s*)?(?:on|via|through)\s*telegram",
+    r"t\.me/",
+    r"wa\.me/",
     r"contact\s*(?:us\s*)?(?:via|on|through)\s*whatsapp",
     r"whatsapp\s*number",
     r"message\s*(?:us\s*)?on\s*whatsapp",

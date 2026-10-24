@@ -10,20 +10,23 @@ client = TestClient(app)
 
 FAKE_RESULT = {
     "extractedText": "urgent hiring pay a fee",
-    "fraudProbability": 0.92,
-    "predictionLabel": "fraudulent",
-    "trustScore": 10,
-    "trustBand": "Very Low Trust",
+    "verdict": "fraudulent",
+    "legitimacyScore": 4,
+    "fraudProbability": 0.96,
     "riskCategory": "Critical",
-    "severityScore": 90,
-    "severityFlags": ["registration_fee_requested"],
-    "shapExplanation": {"type": "shap_global", "target_class": "fraudulent", "features": [], "sample_size": 0},
-    "limeExplanation": {"type": "lime_local", "target_class": "fraudulent", "features": []},
-    "decision": {
-        "recommendation": "Do NOT apply.",
-        "warnings": ["Critical warning: registration fee requested."],
-        "verificationSuggestions": ["Verify the company's official website."],
-    },
+    "confidence": "high",
+    "summary": "This job shows strong signs of a scam: asks for a fee or deposit.",
+    "reasoning": ["Asks for a registration fee."],
+    "redFlags": ["Asks for a fee or deposit"],
+    "greenFlags": [],
+    "advice": ["Don’t pay anything."],
+    "company": {"name": None, "website": None, "verified": False},
+    "source": {"inputType": "text", "url": None},
+    "checks": [],
+    "factors": [],
+    "highlights": [],
+    "signals": {},
+    "engine": {},
 }
 
 
@@ -38,7 +41,8 @@ class TestAnalyzeText:
         with patch("ai_service.routes.analyze.run_analysis_pipeline", return_value=FAKE_RESULT):
             res = client.post("/api/v1/analyze/text", json={"text": "urgent hiring pay a fee"})
         assert res.status_code == 200
-        assert res.json()["riskCategory"] == "Critical"
+        assert res.json()["verdict"] == "fraudulent"
+        assert res.json()["legitimacyScore"] == 4
 
     def test_rejects_empty_text(self):
         res = client.post("/api/v1/analyze/text", json={"text": ""})

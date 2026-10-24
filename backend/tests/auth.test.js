@@ -80,4 +80,12 @@ describe("Auth routes", () => {
     const res = await request(app).post("/api/auth/refresh").set("Cookie", cookie);
     expect(res.status).toBe(401);
   });
+
+  test("session refresh is not throttled like login (regression: users were logged out after ~20 page loads)", async () => {
+    let last;
+    for (let i = 0; i < 25; i += 1) {
+      last = await request(app).post("/api/auth/refresh");
+    }
+    expect(last.status).toBe(401); // no cookie -> unauthorised, but never 429
+  });
 });

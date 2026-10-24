@@ -9,12 +9,20 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from pathlib import Path
 
-from ai_service.bert_model.predict import ModelNotTrainedError, get_model
-from ai_service.routes.analyze import router as analyze_router
+from dotenv import load_dotenv
+
+# Must run before importing modules that read settings at import time.
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
+from fastapi import FastAPI, Request  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+
+from ai_service.bert_model.predict import ModelNotTrainedError, get_metadata, get_model  # noqa: E402
+from ai_service.reasoning import llm  # noqa: E402
+from ai_service.routes.analyze import router as analyze_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_service")
@@ -35,11 +43,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Explainable Fake Job Detection — AI Service",
-    version="1.0.0",
+    title="JobShield — Analysis Service",
+    version="2.0.0",
     description=(
-        "Preprocessing, BERT fraud classification, trust/risk/severity/decision engines, "
-        "and SHAP+LIME explainability (SRS Modules 1-7)."
+        "Text classification, scam-pattern rules, source & employer verification, "
+        "local LLM reasoning and evidence fusion."
     ),
     lifespan=lifespan,
 )
@@ -62,6 +70,17 @@ app.include_router(analyze_router)
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health/components", tags=["health"])
+def component_health():
+    """Which analysis signals are live — used by setup/launch scripts."""
+    try:
+        get_model()
+        classifier = {"available": True, "version": get_metadata().get("version")}
+    except ModelNotTrainedError:
+        classifier = {"available": False, "version": None}
+    return {"classifier": classifier, "reasoning": llm.status()}
 
 
 @app.exception_handler(ModelNotTrainedError)

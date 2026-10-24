@@ -1,4 +1,8 @@
-# Core API
+# Runtime dependencies for the analysis service. No PyTorch needed: the
+# classifier ships as an ONNX model (models_store/classifier/model.onnx).
+# Training dependencies live in requirements-train.txt.
+
+# API
 fastapi==0.140.13
 uvicorn[standard]==0.51.0
 pydantic==2.13.4
@@ -6,52 +10,27 @@ python-multipart==0.0.32
 python-dotenv==1.2.2
 httpx==0.28.1
 
-# Deep learning / NLP
-# NOTE: on Windows, plain `pip install torch==2.13.0` from PyPI resolves to a
-# CPU-only build (verified 2026-07-29 — torch.cuda.is_available() was False).
-# For GPU training, install torch/torchvision FIRST from the CUDA-specific
-# index, then install the rest of this file (pip will see torch==2.13.0
-# already satisfied by the +cu130 local version and won't touch it):
-#   pip install torch==2.13.0 torchvision==0.28.0 --index-url https://download.pytorch.org/whl/cu130
-#   pip install -r requirements.txt
-torch==2.13.0
-transformers==5.14.1
-accelerate==1.14.0
-tensorboard==2.21.0
-nltk==3.10.0
-
-# Explainability
-shap==0.51.0
-lime==0.2.0.1
-
-# Data / ML
+# Classifier inference + explanations
+onnxruntime==1.31.0
+tokenizers==0.22.2
 numpy==2.4.6
-pandas==3.0.5
 scikit-learn==1.9.0
-matplotlib==3.11.1
+joblib==1.6.0
+lime==0.2.0.1
+shap==0.51.0
 
-# Database
-pymongo==4.17.0
-motor==3.7.1
-
-# Input channels: URL scraping, PDF, OCR
+# Web scraping & verification
 requests==2.34.2
 beautifulsoup4==4.15.0
-validators==0.35.0
-# PyMuPDF handles both text extraction and page rasterization (for the
-# scanned-PDF OCR fallback) without needing the poppler system binary that
-# pdf2image would require — verified neither poppler nor tesseract is
-# preinstalled on the dev machine, so pure-pip libraries were prioritized.
+trafilatura==2.3.1
+ddgs==9.16.1
+tldextract==5.4.0
+rapidfuzz==3.14.6
+# Optional headless browser for JavaScript-rendered job pages
+# (setup runs `python -m playwright install chromium`).
+playwright==1.64.1
+
+# Documents & screenshots
 pymupdf==1.28.0
 pillow==12.3.0
-easyocr==1.7.2
-pytesseract==0.3.13
-filetype==1.2.0
-
-# Reliability
-tenacity==9.1.4
-
-# Testing (ai_service)
-pytest==9.1.1
-pytest-asyncio==1.4.0
-pytest-cov==7.1.0
+rapidocr-onnxruntime==1.2.3

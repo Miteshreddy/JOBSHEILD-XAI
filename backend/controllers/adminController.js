@@ -10,20 +10,20 @@ const getStats = asyncHandler(async (_req, res) => {
     User.countDocuments(),
     Analysis.countDocuments(),
     Analysis.aggregate([{ $group: { _id: "$riskCategory", count: { $sum: 1 } } }]),
-    Analysis.aggregate([{ $group: { _id: "$predictionLabel", count: { $sum: 1 } } }]),
+    Analysis.aggregate([{ $group: { _id: "$verdict", count: { $sum: 1 } } }]),
   ]);
 
   const riskCategoryCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
   riskCounts.forEach((row) => {
-    riskCategoryCounts[row._id] = row.count;
+    if (row._id in riskCategoryCounts) riskCategoryCounts[row._id] = row.count;
   });
 
-  const predictionLabelCounts = { fraudulent: 0, legitimate: 0 };
+  const verdictCounts = { legitimate: 0, suspicious: 0, fraudulent: 0 };
   labelCounts.forEach((row) => {
-    predictionLabelCounts[row._id] = row.count;
+    if (row._id in verdictCounts) verdictCounts[row._id] = row.count;
   });
 
-  res.status(200).json({ totalUsers, totalAnalyses, riskCategoryCounts, predictionLabelCounts });
+  res.status(200).json({ totalUsers, totalAnalyses, riskCategoryCounts, verdictCounts });
 });
 
 const listUsers = asyncHandler(async (req, res) => {

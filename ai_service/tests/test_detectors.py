@@ -1,3 +1,5 @@
+import pytest
+
 from ai_service.signals.detectors import (
     detect_all_signals,
     detect_missing_company_profile,
@@ -132,6 +134,34 @@ def test_detect_all_signals_returns_every_key():
         "registration_fee_requested", "personal_email_domain", "missing_company_profile",
         "missing_company_website", "unrealistic_salary", "whatsapp_only_contact",
         "missing_location", "poor_grammar_or_spam_wording", "urgent_or_spam_wording",
-        "unverified_website_or_email",
+        "unverified_website_or_email", "money_movement_request", "sensitive_info_request",
+        "task_based_scam", "chat_app_interview",
     }
     assert set(signals.keys()) == expected_keys
+
+
+@pytest.mark.parametrize(
+    "text, key",
+    [
+        ("Our finance team will mail you a check. Deposit the check and purchase your equipment from our vendor.", "money_movement_request"),
+        ("Receive parcels at your home address and reship them to our clients.", "money_movement_request"),
+        ("Salary is paid in USDT crypto wallet payments every Friday.", "money_movement_request"),
+        ("Like YouTube videos and earn 50 per task. Prepaid tasks unlock bonuses.", "task_based_scam"),
+        ("Your interview will be held on Telegram with our HR manager.", "chat_app_interview"),
+        ("Please send your SSN and bank account details to proceed.", "sensitive_info_request"),
+        ("Pay a registration fee of 500 to confirm your seat.", "registration_fee_requested"),
+    ],
+)
+def test_modern_scam_patterns_detected(text, key):
+    assert detect_all_signals({"description": text})[key] is True
+
+
+def test_negated_fee_mentions_are_not_flagged():
+    text = "We never charge a registration fee. There is no processing fee at any stage."
+    assert detect_registration_fee_requested({"description": text}) is False
+
+
+def test_legitimate_posting_triggers_no_modern_scam_patterns():
+    signals = detect_all_signals(LEGIT_FIELDS)
+    for key in ("money_movement_request", "sensitive_info_request", "task_based_scam", "chat_app_interview"):
+        assert signals[key] is False

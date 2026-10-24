@@ -3,6 +3,7 @@ jest.mock("../utils/aiServiceClient");
 const request = require("supertest");
 const createApp = require("../app");
 const aiService = require("../utils/aiServiceClient");
+const { makeReport } = require("./fixtures");
 const User = require("../models/User");
 
 const app = createApp();
@@ -38,19 +39,7 @@ describe("Admin routes", () => {
       .send({ email: "user@example.com", password: "supersecret123" });
     const accessToken = loginRes.body.accessToken;
 
-    aiService.analyzeText.mockResolvedValue({
-      extractedText: "text",
-      fraudProbability: 0.9,
-      predictionLabel: "fraudulent",
-      trustScore: 10,
-      trustBand: "Very Low Trust",
-      riskCategory: "Critical",
-      severityScore: 90,
-      severityFlags: [],
-      shapExplanation: {},
-      limeExplanation: {},
-      decision: { recommendation: "Do NOT apply.", warnings: [], verificationSuggestions: [] },
-    });
+    aiService.analyzeText.mockResolvedValue(makeReport());
     await request(app).post("/api/analyze/text").set("Authorization", `Bearer ${accessToken}`).send({ text: "x" });
 
     const res = await request(app).get("/api/admin/stats").set("Authorization", `Bearer ${accessToken}`);
@@ -58,6 +47,7 @@ describe("Admin routes", () => {
     expect(res.body.totalUsers).toBe(1);
     expect(res.body.totalAnalyses).toBe(1);
     expect(res.body.riskCategoryCounts.Critical).toBe(1);
+    expect(res.body.verdictCounts.fraudulent).toBe(1);
   });
 
   test("lists users for an admin", async () => {

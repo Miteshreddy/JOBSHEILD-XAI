@@ -13,13 +13,13 @@ function readEnv() {
     jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m",
     jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
     aiServiceBaseUrl: process.env.AI_SERVICE_BASE_URL || "http://localhost:8000",
-    aiServiceTimeoutMs: parseInt(process.env.AI_SERVICE_TIMEOUT_MS || "30000", 10),
+    aiServiceTimeoutMs: parseInt(process.env.AI_SERVICE_TIMEOUT_MS || "240000", 10),
     corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || "http://localhost:5173")
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
     rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10),
-    rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10),
+    rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "600", 10),
     maxPdfUploadBytes: parseInt(process.env.MAX_PDF_UPLOAD_BYTES || "10485760", 10),
     maxImageUploadBytes: parseInt(process.env.MAX_IMAGE_UPLOAD_BYTES || "5242880", 10),
     // Number of reverse-proxy hops to trust for X-Forwarded-For (Express's

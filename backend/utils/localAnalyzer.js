@@ -1,10 +1,9 @@
 /**
- * Local Heuristic Analysis Engine
- * 
- * Performs rule-based fraud detection on job posting text without requiring
- * the Python AI service. Uses 40+ known fraud signals from recruitment fraud
- * research literature. Returns the exact same schema the Python pipeline
- * would — no frontend changes required.
+ * Basic-mode analyzer: keyword heuristics used ONLY when the analysis service
+ * is unreachable, so the site can still answer. It has no language model, no
+ * employer verification and no reasoning, and its report says so (signals
+ * marked unavailable, confidence capped at "low"). Output matches the
+ * analysis service's report schema.
  */
 
 // ─── Fraud signal patterns ────────────────────────────────────────────────────
@@ -57,12 +56,11 @@ const TRUST_SIGNALS = [
 
 // ─── Core analysis engine ─────────────────────────────────────────────────────
 
-function analyzeText(text) {
+function analyzeText(text, { inputType = "text", url = null } = {}) {
   if (!text || text.trim().length < 20) {
     throw new Error("Text is too short to analyze.");
   }
 
-  const lowerText = text.toLowerCase();
   const wordCount = text.split(/\s+/).length;
 
   // Calculate fraud probability
@@ -97,6 +95,8 @@ function analyzeText(text) {
 
   // Clamp to [0.02, 0.97]
   fraudScore = Math.max(0.02, Math.min(0.97, fraudScore));
+  // Same rule as the full engine: asking candidates for money is decisive.
+  if (FRAUD_SIGNALS[0].pattern.test(text)) fraudScore = Math.max(fraudScore, 0.88);
 
   // Calculate trust score (0-100)
   let trustScore = 50;
@@ -112,13 +112,6 @@ function analyzeText(text) {
   if (wordCount > 600) trustScore += 5;
   trustScore = Math.max(5, Math.min(95, trustScore));
 
-  // Trust band
-  let trustBand;
-  if (trustScore >= 70) trustBand = "Highly Trustworthy";
-  else if (trustScore >= 50) trustBand = "Moderately Trustworthy";
-  else if (trustScore >= 30) trustBand = "Suspicious";
-  else trustBand = "Very Low Trust";
-
   // Risk category (combines fraud probability + trust)
   let riskCategory;
   const riskScore = fraudScore * 0.7 + (1 - trustScore / 100) * 0.3;
@@ -132,90 +125,63 @@ function analyzeText(text) {
     Math.max(5, Math.min(95, fraudScore * 85 + triggeredSignals.length * 2.5))
   );
 
-  // Prediction label
-  const predictionLabel = fraudScore >= 0.45 ? "fraudulent" : "legitimate";
-
-  // SHAP explanation (global feature importance)
-  const topFeatures = featureWeights
-    .filter((f) => f.mean_abs_impact > 0)
-    .sort((a, b) => b.mean_abs_impact - a.mean_abs_impact)
-    .slice(0, 10);
-
-  const shapExplanation = {
-    type: "shap_global",
-    target_class: "fraudulent",
-    features: topFeatures.length
-      ? topFeatures
-      : [{ feature: "baseline prior", weight: 0.2, mean_impact: 0.2, mean_abs_impact: 0.2, occurrences: 1 }],
-    sample_size: 1,
-  };
-
-  // LIME explanation (local instance explanation)
-  const limeFeatures = featureWeights
-    .filter((f) => f.occurrences > 0)
-    .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
-    .slice(0, 8)
-    .map((f) => ({
-      feature: f.feature,
-      weight: f.weight,
-      mean_impact: f.weight,
-      mean_abs_impact: Math.abs(f.weight),
-      occurrences: f.occurrences,
-    }));
-
-  const limeExplanation = {
-    type: "lime_local",
-    target_class: "fraudulent",
-    features: limeFeatures.length
-      ? limeFeatures
-      : [{ feature: "no strong indicators", weight: -0.05, mean_impact: -0.05, mean_abs_impact: 0.05, occurrences: 1 }],
-  };
-
-  // Recommendations & warnings
-  const recommendations = [];
-  const warnings = [];
-
-  if (predictionLabel === "fraudulent") {
-    recommendations.push("Do NOT apply to this position — it exhibits multiple signs of recruitment fraud.");
-    recommendations.push("Report this posting to the platform and your local cybercrime authority.");
-    if (triggeredSignals.includes("Fee-charging employer"))
-      warnings.push("Legitimate employers NEVER charge job-seekers fees before employment.");
-    if (triggeredSignals.includes("Unrealistic salary claims"))
-      warnings.push("The advertised salary is significantly above market rate, a common lure.");
-    if (triggeredSignals.includes("Suspicious personal info requests"))
-      warnings.push("Do not share passport, bank account or personal photos with unverified employers.");
-  } else if (riskCategory === "High" || riskCategory === "Medium") {
-    recommendations.push("Proceed with caution — verify the employer's identity through independent sources.");
-    recommendations.push("Search the company name on LinkedIn, Glassdoor and their official website.");
-    recommendations.push("Never pay any fees or share sensitive financial information before signing a contract.");
-    if (triggeredSignals.length > 0)
-      warnings.push(`Detected ${triggeredSignals.length} suspicious indicator(s): ${triggeredSignals.slice(0, 3).join("; ")}.`);
-  } else {
-    recommendations.push("This posting appears legitimate, but always verify independently before sharing personal data.");
-    recommendations.push("Confirm interview details through official company communication channels.");
+  let domain = null;
+  if (url) {
+    try {
+      domain = new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      domain = null;
+    }
   }
+  const verdict = fraudScore >= 0.6 ? "fraudulent" : fraudScore >= 0.3 ? "suspicious" : "legitimate";
+  const reds = triggeredSignals;
+  const greens = FRAUD_SIGNALS.filter((s) => s.weight < 0 && s.pattern.test(text)).map((s) => s.name.replace(/_/g, " "));
+  const factors = featureWeights
+    .filter((f) => f.weight !== 0 && f.occurrences > 0)
+    .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
+    .slice(0, 6)
+    .map((f) => ({ label: f.feature, impact: Math.round(f.weight * 100) / 10, detail: "Keyword pattern match (basic mode)." }));
 
-  if (triggeredSignals.includes("Suspicious contact channels"))
-    warnings.push("The posting requests contact via personal messaging apps instead of official email.");
-  if (triggeredSignals.includes("Government impersonation"))
-    warnings.push("Verify government job postings only via official .gov websites — scammers frequently impersonate ministries.");
+  const advice =
+    verdict === "fraudulent"
+      ? ["Don’t pay anything or share ID or bank details.", "Stop replying through the contacts in this posting.", "Report the posting to the platform where you found it."]
+      : ["Find the same role on the employer’s official careers page.", "Confirm the recruiter through the company’s official channels.", "Never pay fees or share ID before an offer is confirmed."];
 
   return {
-    extractedText: text.slice(0, 5000), // cap stored text
+    extractedText: text.slice(0, 20000),
+    verdict,
+    legitimacyScore: Math.round((1 - fraudScore) * 100),
     fraudProbability: parseFloat(fraudScore.toFixed(4)),
-    predictionLabel,
-    trustScore: Math.round(trustScore),
-    trustBand,
     riskCategory,
-    severityScore,
-    severityFlags: triggeredSignals,
-    shapExplanation,
-    limeExplanation,
-    decision: {
-      recommendation: recommendations[0] || "Exercise standard due diligence before applying.",
-      warnings,
-      verificationSuggestions: recommendations.slice(1),
+    confidence: "low",
+    summary:
+      verdict === "fraudulent"
+        ? `Basic check: this posting matches several scam patterns (${reds.slice(0, 2).join(", ").toLowerCase()}).`
+        : "Basic check only: the full analysis service is offline, so the employer and source could not be verified.",
+    reasoning: [
+      "The full analysis service was unavailable, so only keyword checks were run.",
+      reds.length ? `Matched scam patterns: ${reds.join("; ")}.` : "No common scam keywords were found.",
+      "Employer, source and links were not verified — treat this result as preliminary.",
+    ],
+    redFlags: reds,
+    greenFlags: greens,
+    advice,
+    company: { name: null, website: null, verified: false, wellKnown: false, logo: null, lookupSource: null },
+    source: { inputType, url, domain, platform: null, platformType: url ? "web" : "none", companyPage: null, applyUrl: null, posted: null },
+    checks: [
+      { id: "basic", label: "Limited analysis", status: "warn", detail: "The analysis service is offline; employer and source verification were skipped." },
+      reds.length
+        ? { id: "patterns", label: "Scam patterns", status: "fail", detail: `Found: ${reds.join("; ")}.` }
+        : { id: "patterns", label: "Scam patterns", status: "pass", detail: "No common scam keywords found." },
+    ],
+    factors,
+    highlights: [],
+    signals: {
+      language: { available: false, score: null },
+      reasoning: { available: false, verdict: null, confidence: null },
+      verification: { checksPassed: reds.length ? 0 : 1, checksFailed: reds.length ? 1 : 0, checksTotal: 2 },
     },
+    engine: { mode: "basic", trustScore, severityScore },
   };
 }
 

@@ -19,4 +19,26 @@ const authLimiter = rateLimit({
   message: { status: 429, error: "Too many authentication attempts. Please try again later." },
 });
 
-module.exports = { generalLimiter, authLimiter };
+/** Session refresh runs once per page load for every signed-in visitor, so it
+ * must not share the tight credential-guessing budget above — doing so logged
+ * users out after ~20 page loads. It only accepts a valid httpOnly cookie, so
+ * a generous limit is safe. */
+const refreshLimiter = rateLimit({
+  windowMs: env.rateLimitWindowMs,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 429, error: "Too many requests. Please try again later." },
+});
+
+/** Analyses are expensive (scraping, OCR, model inference). */
+const analysisLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 12,
+  skip: () => env.nodeEnv === "test",
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 429, error: "You're checking jobs very quickly — please wait a minute and try again." },
+});
+
+module.exports = { generalLimiter, authLimiter, refreshLimiter, analysisLimiter };

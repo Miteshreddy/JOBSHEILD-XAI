@@ -1,58 +1,57 @@
-import { forwardRef } from 'react';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Link, type LinkProps } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { Spinner } from './Spinner';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse';
+type Size = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  isLoading?: boolean;
-  children: ReactNode;
+const base =
+  'relative inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium select-none transition-[background,color,border,box-shadow,transform] duration-200 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]';
+
+const variants: Record<Variant, string> = {
+  primary:
+    'bg-accent text-accent-fg shadow-[0_1px_0_0_rgb(255_255_255/0.2)_inset,0_8px_24px_-8px_rgb(var(--accent)/0.6)] hover:brightness-110',
+  secondary: 'border border-line-strong bg-surface text-fg hover:bg-surface-2',
+  ghost: 'text-fg-muted hover:text-fg hover:bg-surface-2',
+  danger: 'bg-danger text-white hover:brightness-110',
+  inverse: 'bg-fg text-bg hover:opacity-90',
+};
+
+const sizes: Record<Size, string> = {
+  sm: 'h-8 rounded-lg px-3 text-[13px]',
+  md: 'h-10 rounded-xl px-4 text-sm',
+  lg: 'h-12 rounded-xl px-6 text-[15px]',
+};
+
+export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className?: string) {
+  return cn(base, variants[variant], sizes[size], className);
 }
 
-const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary:
-    'bg-brand-600 text-white shadow-soft hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-300 disabled:shadow-none',
-  secondary:
-    'border border-slate-200 bg-white text-slate-900 shadow-soft hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:active:bg-slate-600',
-  outline:
-    'border border-slate-300 bg-transparent text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800',
-  ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white',
-  danger:
-    'bg-red-600 text-white shadow-soft hover:bg-red-700 active:bg-red-800 disabled:bg-red-300 disabled:shadow-none',
-};
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  size?: Size;
+  loading?: boolean;
+  icon?: ReactNode;
+}
 
-const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 gap-1.5 rounded-md px-3 text-xs',
-  md: 'h-10 gap-2 rounded-lg px-4 text-sm',
-  lg: 'h-12 gap-2 rounded-lg px-6 text-base',
-  icon: 'h-10 w-10 rounded-lg',
-};
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'primary', size = 'md', loading, icon, className, children, disabled, ...props },
+  ref
+) {
+  return (
+    <button ref={ref} className={buttonClasses(variant, size, className)} disabled={disabled || loading} {...props}>
+      {loading ? <Spinner className="size-4" /> : icon}
+      {children}
+    </button>
+  );
+});
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', isLoading, children, className, disabled, ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          'inline-flex select-none items-center justify-center whitespace-nowrap font-medium',
-          'transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.98]',
-          'disabled:cursor-not-allowed disabled:active:scale-100',
-          VARIANT_CLASSES[variant],
-          SIZE_CLASSES[size],
-          className
-        )}
-        disabled={disabled || isLoading}
-        {...props}
-      >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {children}
-      </button>
-    );
-  }
-);
-Button.displayName = 'Button';
+interface ButtonLinkProps extends LinkProps {
+  variant?: Variant;
+  size?: Size;
+}
+
+export function ButtonLink({ variant = 'primary', size = 'md', className, ...props }: ButtonLinkProps) {
+  return <Link className={buttonClasses(variant, size, className as string)} {...props} />;
+}

@@ -13,11 +13,11 @@ const router = express.Router();
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: query
- *         name: riskCategory
- *         schema: { type: string, enum: [Low, Medium, High, Critical] }
+ *         name: verdict
+ *         schema: { type: string, enum: [legitimate, suspicious, fraudulent] }
  *       - in: query
  *         name: sortBy
- *         schema: { type: string, enum: [createdAt, riskCategory], default: createdAt }
+ *         schema: { type: string, enum: [createdAt, legitimacyScore], default: createdAt }
  *       - in: query
  *         name: order
  *         schema: { type: string, enum: [asc, desc], default: desc }

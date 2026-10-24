@@ -1,6 +1,7 @@
 const express = require("express");
 const { body, param } = require("express-validator");
 const validate = require("../middleware/validate");
+const { analysisLimiter } = require("../middleware/rateLimiter");
 const { pdfUploadMiddleware, imageUploadMiddleware } = require("../middleware/upload");
 const analysisController = require("../controllers/analysisController");
 
@@ -27,7 +28,15 @@ const router = express.Router();
  */
 router.post(
   "/text",
-  [body("text").trim().notEmpty().withMessage("Job advertisement text must not be empty.")],
+  analysisLimiter,
+  [
+    body("text")
+      .trim()
+      .notEmpty()
+      .withMessage("Job advertisement text must not be empty.")
+      .isLength({ max: 50000 })
+      .withMessage("Text is too long (max 50,000 characters)."),
+  ],
   validate,
   analysisController.submitText
 );
@@ -53,6 +62,7 @@ router.post(
  */
 router.post(
   "/url",
+  analysisLimiter,
   [
     body("url")
       .trim()
@@ -82,7 +92,7 @@ router.post(
  *       400: { description: Missing file or content does not match declared type. }
  *       413: { description: File exceeds the maximum allowed size. }
  */
-router.post("/pdf", pdfUploadMiddleware, analysisController.submitPdf);
+router.post("/pdf", analysisLimiter, pdfUploadMiddleware, analysisController.submitPdf);
 
 /**
  * @openapi
@@ -103,7 +113,7 @@ router.post("/pdf", pdfUploadMiddleware, analysisController.submitPdf);
  *       400: { description: Missing file or content does not match declared type. }
  *       413: { description: File exceeds the maximum allowed size. }
  */
-router.post("/image", imageUploadMiddleware, analysisController.submitImage);
+router.post("/image", analysisLimiter, imageUploadMiddleware, analysisController.submitImage);
 
 /**
  * @openapi
