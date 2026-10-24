@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react';
-import { History, LogOut, Menu, Settings, Shield, X } from 'lucide-react';
+import { ChevronRight, History, LogOut, Menu, Settings, Shield, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { ThemePicker } from './ThemePicker';
 const LINKS = [
   { to: '/#features', label: 'Product' },
   { to: '/#how', label: 'How it works' },
+  { to: '/#transparency', label: 'Accuracy' },
   { to: '/#faq', label: 'FAQ' },
 ];
 
@@ -83,11 +84,11 @@ export function Navbar() {
   return (
     <header className={cn('sticky top-0 z-40 transition-[background,border] duration-300', scrolled || open ? 'glass border-b border-line' : 'border-b border-transparent')}>
       <nav className="container-page flex h-16 items-center justify-between gap-4">
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-8">
           <Logo />
           <div className="hidden items-center gap-1 md:flex">
             {LINKS.map((l) => (
-              <Link key={l.to} to={l.to} className="rounded-lg px-3 py-1.5 text-sm text-fg-muted transition-colors hover:text-fg">
+              <Link key={l.to} to={l.to} className="relative px-3 py-1.5 text-[15px] text-fg-muted transition-colors after:absolute after:inset-x-3 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-fg after:transition-transform after:duration-300 hover:text-fg hover:after:scale-x-100">
                 {l.label}
               </Link>
             ))}
@@ -102,13 +103,13 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <ThemePicker />
           {!isInitializing && !user && (
-            <Link to="/login" className="hidden rounded-lg px-3 py-1.5 text-sm text-fg-muted transition-colors hover:text-fg sm:block">
+            <Link to="/login" className="hidden px-3 py-1.5 text-[15px] text-fg transition-opacity hover:opacity-70 sm:block">
               Sign in
             </Link>
           )}
           {user ? <UserMenu /> : null}
-          <ButtonLink to="/analyze" size="sm" className="hidden sm:inline-flex">
-            Check a job
+          <ButtonLink to="/analyze" size="md" className="hidden sm:inline-flex">
+            Check a job <ChevronRight className="size-4" />
           </ButtonLink>
           <button
             className="flex size-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 md:hidden"

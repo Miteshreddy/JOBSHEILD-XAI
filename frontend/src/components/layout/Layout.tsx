@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { Logo } from '@/components/ui/Logo';
+import { ArrowUpRight } from 'lucide-react';
+import { LogoMark } from '@/components/ui/Logo';
 import { PageLoader } from '@/components/ui/Spinner';
 import { useAuthStore } from '@/store/authStore';
 import { Navbar } from './Navbar';
@@ -21,37 +22,42 @@ function ScrollManager() {
 
 function Footer() {
   const cols = [
-    { title: 'Product', links: [{ to: '/analyze', label: 'Check a job' }, { to: '/#how', label: 'How it works' }, { to: '/#faq', label: 'FAQ' }] },
-    { title: 'Account', links: [{ to: '/login', label: 'Sign in' }, { to: '/register', label: 'Create account' }, { to: '/history', label: 'History' }] },
-    { title: 'Stay safe', links: [{ to: '/#faq', label: 'Common job scams' }, { to: '/settings', label: 'Appearance' }] },
+    { title: 'Product', links: [{ to: '/analyze', label: 'Check a job' }, { to: '/#features', label: 'Signals' }, { to: '/#how', label: 'How it works' }, { to: '/#transparency', label: 'Accuracy' }] },
+    { title: 'Account', links: [{ to: '/login', label: 'Sign in' }, { to: '/register', label: 'Create account' }, { to: '/history', label: 'History' }, { to: '/settings', label: 'Appearance' }] },
+    { title: 'Stay safe', links: [{ to: '/#faq', label: 'FAQ' }, { to: '/#how', label: 'Common job scams' }] },
   ];
   return (
-    <footer className="border-t border-line">
-      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <Logo />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-fg-muted">
-            Verify any job offer before you share your details, pay a fee, or quit your current role.
-          </p>
-        </div>
-        {cols.map((c) => (
-          <div key={c.title}>
-            <p className="text-[13px] font-medium text-fg">{c.title}</p>
-            <ul className="mt-4 space-y-2.5">
-              {c.links.map((l) => (
-                <li key={l.label}>
-                  <Link to={l.to} className="text-sm text-fg-muted transition-colors hover:text-fg">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+    <footer className="container-page">
+      <div className="h-px bg-line" />
+      <div className="grid gap-14 py-16 md:grid-cols-2">
+        <div className="flex flex-col justify-between gap-10">
+          <Link to="/" className="flex items-center gap-3 text-[32px] tracking-[-0.03em]">
+            <LogoMark className="size-9" /> JobShield
+          </Link>
+          <div>
+            <Link to="/analyze" className="inline-flex items-center gap-1.5 border-b border-fg pb-1 text-[15px]">
+              Check a job <ArrowUpRight className="size-4" />
+            </Link>
+            <p className="mt-6 text-[14px] text-fg-muted">© {new Date().getFullYear()} JobShield · Runs on your own machine</p>
+            <p className="mt-1 text-[13px] text-fg-subtle">Results are guidance, not a guarantee. Always verify through official channels.</p>
           </div>
-        ))}
-      </div>
-      <div className="container-page flex flex-col gap-2 border-t border-line py-6 text-[13px] text-fg-subtle sm:flex-row sm:justify-between">
-        <p>© {new Date().getFullYear()} JobShield. Runs on your own machine — postings never leave it except for public lookups.</p>
-        <p>Results are guidance, not a guarantee. Always verify through official channels.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          {cols.map((c) => (
+            <div key={c.title}>
+              <p className="text-[14px] text-fg-muted">{c.title}</p>
+              <ul className="mt-4 space-y-2">
+                {c.links.map((l) => (
+                  <li key={l.label}>
+                    <Link to={l.to} className="text-[15px] transition-opacity hover:opacity-60">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
     </footer>
   );

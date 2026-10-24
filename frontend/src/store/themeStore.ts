@@ -4,13 +4,13 @@ export type Mode = 'light' | 'dark' | 'system';
 export type Accent = 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose' | 'sky' | 'mono';
 
 export const ACCENTS: { id: Accent; label: string; swatch: string }[] = [
+  { id: 'mono', label: 'Monochrome', swatch: '#d4d4d4' },
   { id: 'indigo', label: 'Indigo', swatch: '#6366f1' },
   { id: 'violet', label: 'Violet', swatch: '#8b5cf6' },
   { id: 'sky', label: 'Sky', swatch: '#0ea5e9' },
   { id: 'emerald', label: 'Emerald', swatch: '#10b981' },
   { id: 'amber', label: 'Amber', swatch: '#f59e0b' },
   { id: 'rose', label: 'Rose', swatch: '#f43f5e' },
-  { id: 'mono', label: 'Graphite', swatch: '#71717a' },
 ];
 
 const MODE_KEY = 'jobshield-theme';
@@ -49,7 +49,7 @@ function storedMode(): Mode {
 
 function storedAccent(): Accent {
   const v = read(ACCENT_KEY);
-  return ACCENTS.some((a) => a.id === v) ? (v as Accent) : 'indigo';
+  return ACCENTS.some((a) => a.id === v) ? (v as Accent) : 'mono';
 }
 
 interface ThemeState {

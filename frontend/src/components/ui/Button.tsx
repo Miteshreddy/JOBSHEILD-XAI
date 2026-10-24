@@ -10,18 +10,17 @@ const base =
   'relative inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium select-none transition-[background,color,border,box-shadow,transform] duration-200 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]';
 
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-accent text-accent-fg shadow-[0_1px_0_0_rgb(255_255_255/0.2)_inset,0_8px_24px_-8px_rgb(var(--accent)/0.6)] hover:brightness-110',
-  secondary: 'border border-line-strong bg-surface text-fg hover:bg-surface-2',
+  primary: 'bg-accent text-accent-fg hover:opacity-90',
+  secondary: 'bg-surface-2 text-fg hover:bg-line-strong',
   ghost: 'text-fg-muted hover:text-fg hover:bg-surface-2',
   danger: 'bg-danger text-white hover:brightness-110',
   inverse: 'bg-fg text-bg hover:opacity-90',
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'h-8 rounded-lg px-3 text-[13px]',
-  md: 'h-10 rounded-xl px-4 text-sm',
-  lg: 'h-12 rounded-xl px-6 text-[15px]',
+  sm: 'h-8 rounded-full px-3.5 text-[13px]',
+  md: 'h-10 rounded-full px-5 text-sm',
+  lg: 'h-12 rounded-full px-6 text-[15px]',
 };
 
 export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className?: string) {

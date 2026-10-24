@@ -232,7 +232,7 @@ export function ReportView({ analysis }: { analysis: Analysis }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          'relative overflow-hidden rounded-[28px] border bg-surface p-6 sm:p-9',
+          'relative overflow-hidden border bg-surface p-6 sm:p-9',
           v.tone === 'safe' ? 'border-safe/25' : v.tone === 'warn' ? 'border-warn/25' : 'border-danger/25'
         )}
       >
