@@ -103,16 +103,26 @@ if not exist "ai_service\.venv\Scripts\python.exe" (
     )
 )
 set "VPY=ai_service\.venv\Scripts\python.exe"
-echo [3/7] Installing Python packages ^(a few minutes the first time^)...
-"%VPY%" -m pip install --upgrade pip --quiet --disable-pip-version-check
-"%VPY%" -m pip install -r ai_service\requirements.txt --quiet --disable-pip-version-check
+rem Slow or unstable connections: wait longer per read, retry each file, and
+rem keep finished downloads in pip's cache so a retry resumes, not restarts.
+set "PIP_DEFAULT_TIMEOUT=120"
+set "PIP_RETRIES=10"
+set "PIP_DISABLE_PIP_VERSION_CHECK=1"
+echo [3/7] Installing Python packages ^(~280 MB the first time - progress is shown below^)...
+call :pip_install --upgrade pip
+call :pip_install -r ai_service\requirements.txt
 if errorlevel 1 (
-    echo  [ERROR] Python package installation failed. Check your internet connection and run setup.bat again.
+    echo.
+    echo  [ERROR] Python packages could not be downloaded after 3 attempts.
+    echo          Your connection to pypi.org is timing out. Check your internet
+    echo          ^(or try another network / turn off VPN^), then run start.bat again -
+    echo          everything already downloaded is kept, so it continues where it stopped.
     pause
     exit /b 1
 )
 echo       Installing the headless browser used for JavaScript-heavy job sites...
-"%VPY%" -m playwright install chromium >nul 2>nul
+"%VPY%" -m playwright install chromium
+if errorlevel 1 "%VPY%" -m playwright install chromium
 if errorlevel 1 echo       [WARN] Browser download failed - most job sites still work without it.
 echo [3/7] Python packages ... OK
 
@@ -121,7 +131,7 @@ rem 4. Node packages (web app + API)
 rem ------------------------------------------------------------------
 echo [4/7] Installing web app packages...
 pushd backend
-call npm install --no-audit --no-fund --loglevel=error
+call :npm_install
 if errorlevel 1 (
     popd
     echo  [ERROR] Backend package installation failed.
@@ -132,7 +142,7 @@ echo       Downloading the embedded database ^(first run only^)...
 call node -e "require('mongodb-memory-server').MongoBinary.getPath().then(()=>process.exit(0)).catch(()=>process.exit(0))"
 popd
 pushd frontend
-call npm install --no-audit --no-fund --loglevel=error
+call :npm_install
 if errorlevel 1 (
     popd
     echo  [ERROR] Frontend package installation failed.
@@ -184,11 +194,21 @@ rem ------------------------------------------------------------------
 rem 6. Reasoning model
 rem ------------------------------------------------------------------
 echo [6/7] Downloading the reasoning model %OLLAMA_MODEL% ^(~3 GB, first run only^)...
-"!OLLAMA!" pull %OLLAMA_MODEL%
-if errorlevel 1 (
-    echo  [WARN] Model download failed. JobShield works without it; run setup.bat again to retry.
-) else (
+set "MODEL_OK="
+for /L %%A in (1,1,3) do (
+    if not defined MODEL_OK (
+        "!OLLAMA!" pull %OLLAMA_MODEL% && set "MODEL_OK=1"
+        if not defined MODEL_OK (
+            echo       Download interrupted - resuming in 10 seconds ^(attempt %%A of 3^)...
+            timeout /t 10 /nobreak >nul
+        )
+    )
+)
+if defined MODEL_OK (
     echo [6/7] Reasoning model ... OK
+) else (
+    echo  [WARN] Model download did not finish. JobShield works without it, and start.bat
+    echo         will keep downloading it in the background next time.
 )
 
 :after_ollama
@@ -206,6 +226,22 @@ exit /b %errorlevel%
 rem ==================================================================
 rem Helpers
 rem ==================================================================
+:pip_install
+for /L %%A in (1,1,3) do (
+    "%VPY%" -m pip install %* --prefer-binary --progress-bar on && exit /b 0
+    echo       Network problem talking to pypi.org - retrying in 15 seconds ^(attempt %%A of 3^)...
+    timeout /t 15 /nobreak >nul
+)
+exit /b 1
+
+:npm_install
+for /L %%A in (1,1,3) do (
+    call npm install --no-audit --no-fund --loglevel=error --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --fetch-timeout=300000 && exit /b 0
+    echo       Network problem talking to npm - retrying in 15 seconds ^(attempt %%A of 3^)...
+    timeout /t 15 /nobreak >nul
+)
+exit /b 1
+
 :find_python
 set "PY="
 for %%V in (3.12 3.13 3.11 3.10) do (
