@@ -9,14 +9,16 @@ verdict step by step.
 ## Quick start (Windows)
 
 1. Download the repository (Code → Download ZIP) and unzip it.
-2. Double-click **`setup.bat`**.
+2. Double-click **`start.bat`**. That's the only step.
 
-It installs anything missing (Python, Node.js, Ollama), every package, the local reasoning model
-(`qwen3.5:4b`, ~3 GB), builds the website, and opens **http://localhost:5001**. The first run
-takes 10–30 minutes; afterwards use **`start.bat`** to start in seconds. No MongoDB install is
-needed — an embedded database stores accounts and history in `backend/.data/`.
+On the first run it installs whatever the PC is missing — Python 3.12, Node.js, the Microsoft
+Visual C++ runtime, Ollama and the local reasoning model (`qwen3.5:4b`, ~3 GB) — plus every
+package, the headless browser and an embedded database, then opens **http://localhost:5001**.
+No admin rights are needed; it uses `winget` and falls back to direct downloads. The first run
+takes 10–30 minutes (mostly downloads); every later run starts in seconds.
 
-macOS / Linux: `./setup.sh` (needs Python 3.10–3.13 and Node.js 20+).
+Needs Windows 10/11, ~8 GB free disk and 8 GB RAM (16 GB recommended). macOS / Linux:
+`./setup.sh` (needs Python 3.10–3.13 and Node.js 20+).
 
 ## How a verdict is made
 

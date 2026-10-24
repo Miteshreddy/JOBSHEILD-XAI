@@ -296,7 +296,7 @@ export function Ruler({ value, labels, format, flip = false }: { value: number; 
       {labels.map((l) => (
         <span key={l}>{l}</span>
       ))}
-      <motion.span className="absolute -top-1 whitespace-nowrap rounded-full bg-fg px-2.5 py-0.5 text-[11px] font-medium text-bg shadow-[0_0_24px_rgb(var(--accent)/0.5)]" style={{ left, x: shift }}>
+      <motion.span className="absolute -top-1 whitespace-nowrap rounded-full bg-fg px-2.5 py-0.5 text-[11px] font-medium text-bg shadow-[0_0_24px_rgb(var(--accent)/0.5)] ring-[6px] ring-bg" style={{ left, x: shift }}>
         {text}
       </motion.span>
     </div>

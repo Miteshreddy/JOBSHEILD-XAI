@@ -134,8 +134,11 @@ def verify_posting(fields: dict, text: str, input_type: str, extra_company_hint:
         checks.append(_check("source", "Posting source", "warn", f"Published on {source_domain}, which is not a recognised job board or the employer's official domain."))
 
     # 2. Who the employer is
-    if company:
-        how = {"registry": "a widely recognised employer", "wikidata": "a registered organisation with a public record", "web_search": "found via web search"}[company["source"]]
+    if company and company["source"] == "web_search":
+        # A name match in search results may be a different company.
+        checks.append(_check("employer", "Employer identified", "warn", f"“{company['name']}” has no public company record. A possible website, {company['website']}, was found by web search, but it couldn’t be confirmed to be the same company."))
+    elif company:
+        how = {"registry": "a widely recognised employer", "wikidata": "a registered organisation with a public record"}[company["source"]]
         checks.append(_check("employer", "Employer identified", "pass", f"{company['name']} — {how}. Official site: {company['website']}"))
     elif claimed_name:
         checks.append(_check("employer", "Employer identified", "warn", f"The posting names “{claimed_name}”, but no official website or public record could be found for it."))

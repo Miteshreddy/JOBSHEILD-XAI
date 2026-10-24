@@ -127,3 +127,16 @@ def test_works_without_classifier_or_llm():
     result, _ = run({"description": "Pay a registration fee of Rs 2000 for the training kit. WhatsApp only."}, "text")
     assert result["verdict"] == "fraudulent"
     assert all(f["label"] not in ("Language analysis", "Reasoning engine") for f in result["factors"])
+
+
+def test_web_search_match_is_a_warning_not_a_verified_employer(monkeypatch):
+    monkeypatch.setattr(
+        company_resolver,
+        "_from_web_search",
+        lambda name: {"name": name, "website": "https://globaltech.ind.in", "official_domains": ["globaltech.ind.in"], "source": "web_search", "confidence": 0.75, "well_known": False},
+    )
+    company_resolver.resolve_company.cache_clear()
+    verification = verify.verify_posting({}, "Global Tech Solutions is hiring remote data analysts.", "text")
+    employer = next(c for c in verification["checks"] if c["id"] == "employer")
+    assert employer["status"] == "warn"
+    assert verification["company"]["verified"] is False

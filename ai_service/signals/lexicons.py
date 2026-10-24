@@ -41,7 +41,12 @@ WHATSAPP_KEYWORDS = [
 ]
 
 URGENCY_KEYWORDS = [
-    r"\burgent\b", r"\burgently\b", r"immediate\s*joining", r"apply\s*now",
+    # Urgency aimed at the candidate — not "solve urgent customer problems"
+    # in a genuine job description.
+    r"urgent(?:ly)?\s+(?:hiring|requirement|opening|vacanc(?:y|ies)|recruitment|position|need(?:ed)?\s+(?:for|of)?)",
+    r"(?:hiring|required|requirement|needed|join|apply|joining)\s+urgent(?:ly)?",
+    r"(?:^|\n)\s*urgent\b", r"\burgent\s*[!:]",
+    r"immediate\s*joining", r"apply\s*now",
     r"hurry\s*up", r"limited\s*seats", r"act\s*fast", r"only\s*\d+\s*seats?\s*left",
     r"don'?t\s*miss\s*(?:this|out)",
 ]

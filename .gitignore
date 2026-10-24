@@ -71,3 +71,4 @@ logs/
 # --- Misc project scratch ---
 .claude/
 *.docx
+.jobshield-installed

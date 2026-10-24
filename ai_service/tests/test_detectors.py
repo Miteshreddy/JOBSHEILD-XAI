@@ -165,3 +165,18 @@ def test_legitimate_posting_triggers_no_modern_scam_patterns():
     signals = detect_all_signals(LEGIT_FIELDS)
     for key in ("money_movement_request", "sensitive_info_request", "task_based_scam", "chat_app_interview"):
         assert signals[key] is False
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("Collaborates with other engineers to solve urgent customer problems.", False),
+        ("Handle urgent support tickets calmly and professionally.", False),
+        ("URGENT hiring! Work from home.", True),
+        ("Urgent requirement for data entry operators.", True),
+        ("We are hiring urgently, only 10 seats left.", True),
+    ],
+)
+def test_urgency_only_flags_pressure_on_the_candidate(text, expected):
+    """Regression: genuine postings describing urgent *work* were flagged as pressure tactics."""
+    assert detect_urgent_or_spam_wording({"description": text}) is expected

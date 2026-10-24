@@ -5,16 +5,14 @@ from ai_service.bert_model import predict
 
 
 def test_resolve_current_model_dir_raises_clear_error_when_untrained(monkeypatch, tmp_path):
-    monkeypatch.setattr(predict, "MODELS_STORE_DIR", tmp_path)
+    monkeypatch.setattr(predict, "CLASSIFIER_DIR", tmp_path)
     with pytest.raises(predict.ModelNotTrainedError):
         predict.resolve_current_model_dir()
 
 
 @pytest.mark.slow
 class TestPredictProbaBatch:
-    """Runs against the real trained model (models_store/) — these only pass
-    once `python -m ai_service.bert_model.train_model` has produced one, so
-    they're excluded from CI (which has no GPU/time budget to train one)."""
+    """Runs against the shipped ONNX classifier (models_store/classifier/)."""
 
     def test_returns_correct_shape(self):
         probs = predict.predict_proba_batch(["a normal job posting", "urgent pay a fee now"])

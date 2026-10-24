@@ -18,6 +18,19 @@ set "HAS_WINGET=0"
 where winget >nul 2>nul && set "HAS_WINGET=1"
 
 rem ------------------------------------------------------------------
+rem 0. Machine checks (warnings only - setup continues either way)
+rem ------------------------------------------------------------------
+for /f %%G in ('powershell -NoProfile -Command "[math]::Floor((Get-PSDrive -Name ((Get-Location).Drive.Name)).Free/1GB)"') do set "FREE_GB=%%G"
+if defined FREE_GB if !FREE_GB! LSS 10 (
+    echo  [WARN] Only !FREE_GB! GB free on this drive. JobShield needs about 8 GB ^(packages + AI model^).
+)
+for /f %%G in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB)"') do set "RAM_GB=%%G"
+if defined RAM_GB if !RAM_GB! LSS 8 (
+    echo  [WARN] This PC has !RAM_GB! GB of RAM. The reasoning model works best with 8 GB or more;
+    echo         checks will still run, just more slowly.
+)
+
+rem ------------------------------------------------------------------
 rem 1. Python 3.10 - 3.13
 rem ------------------------------------------------------------------
 call :find_python
@@ -65,6 +78,17 @@ if not defined NODE_OK (
     exit /b 1
 )
 echo [2/7] Node.js ........... OK
+
+rem The AI libraries (onnxruntime) need the Microsoft Visual C++ runtime.
+if not exist "%SystemRoot%\System32\vcruntime140_1.dll" (
+    echo       Installing the Microsoft Visual C++ runtime...
+    if "%HAS_WINGET%"=="1" (
+        winget install -e --id Microsoft.VCRedist.2015+.x64 --silent --accept-package-agreements --accept-source-agreements >nul 2>nul
+    ) else (
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -UseBasicParsing https://aka.ms/vs/17/release/vc_redist.x64.exe -OutFile $env:TEMP\vc_redist.x64.exe"
+        "%TEMP%\vc_redist.x64.exe" /install /quiet /norestart
+    )
+)
 
 rem ------------------------------------------------------------------
 rem 3. Python packages (analysis service)
@@ -171,6 +195,8 @@ if errorlevel 1 (
 rem ------------------------------------------------------------------
 rem 7. Launch
 rem ------------------------------------------------------------------
+rem start.bat skips setup on later runs once this marker exists.
+echo installed> ".jobshield-installed"
 echo [7/7] Starting JobShield...
 echo.
 "%VPY%" launch.py

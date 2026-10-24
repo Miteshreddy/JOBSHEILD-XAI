@@ -160,13 +160,6 @@ function Hero() {
             <SplitReveal text="Postings in," delay={0.35} className="block text-fg" />
             <SplitReveal text="verdicts out" delay={0.5} className="block text-fg-muted" />
           </p>
-          <div className="mt-6 h-6 text-[13px] text-fg-subtle">
-            <AnimatePresence mode="wait">
-              <motion.p key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }}>
-                <span className="text-fg-muted">{c.source}</span> · {c.who} · <span className={c.tone === 'safe' ? 'text-safe' : 'text-danger'}>{c.verdict}</span>
-              </motion.p>
-            </AnimatePresence>
-          </div>
           <HeroChecker />
         </div>
 
