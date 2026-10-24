@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { getAdminStats, listAdminUsers } from '@/api/admin';
 import { getApiErrorMessage } from '@/api/client';
 import { Alert, Badge, Skeleton } from '@/components/ui/Badge';
+import { PageIntro } from '@/components/landing/Effects';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 
@@ -35,8 +36,7 @@ export function AdminPage() {
 
   return (
     <div className="container-page max-w-5xl py-12 sm:py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Admin</h1>
-      <p className="mt-1.5 text-fg-muted">Platform usage at a glance.</p>
+      <PageIntro label="Admin" title="Platform usage" sub="at a glance" />
       {error && (
         <div className="mt-6">
           <Alert>{getApiErrorMessage(error)}</Alert>

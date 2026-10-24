@@ -434,3 +434,29 @@ export function WaveArt() {
     </Art>
   );
 }
+
+/* ── App page header ──────────────────────────────────────────────────── */
+
+/** Editorial header for app pages, matching the landing page's sections. */
+export function PageIntro({ label, title, sub, children, field = true }: { label: string; title: string; sub?: string; children?: ReactNode; field?: boolean }) {
+  return (
+    <div className="relative">
+      {field && (
+        <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-72 opacity-50 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]" aria-hidden>
+          <SignalField />
+        </div>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-6 pb-10">
+        <div>
+          <motion.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }} className="mb-5 flex items-center gap-2.5 text-[14px] text-fg-muted">
+            <span className="size-1.5 rounded-full bg-accent shadow-[0_0_12px_rgb(var(--accent))]" />
+            {label}
+          </motion.p>
+          <TwoTone as="h1" title={title} sub={sub} className="text-[32px] leading-[1.15] sm:text-[40px]" />
+        </div>
+        {children}
+      </div>
+      <Divider />
+    </div>
+  );
+}

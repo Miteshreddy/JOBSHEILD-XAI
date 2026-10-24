@@ -8,6 +8,7 @@ import { submitFile, submitText, submitUrl } from '@/api/analysis';
 import { getApiErrorMessage } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Badge';
+import { PageIntro } from '@/components/landing/Effects';
 import { cn } from '@/lib/cn';
 import type { Analysis } from '@/types';
 
@@ -130,7 +131,7 @@ function normalizeUrl(raw: string) {
 }
 
 interface PrefillState {
-  mode?: 'url' | 'text';
+  mode?: Mode;
   value?: string;
   autostart?: boolean;
 }
@@ -212,13 +213,8 @@ export function AnalyzePage() {
 
   return (
     <div className="relative">
-      <div className="bg-grid mask-radial absolute inset-x-0 top-0 -z-10 h-[480px]" aria-hidden />
       <div className="container-page max-w-3xl py-14 sm:py-20">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-          <h1 className="text-gradient text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">Check a job</h1>
-          <p className="mx-auto mt-3 max-w-lg text-[17px] text-fg-muted">Share the posting however you received it. You’ll get a verdict, the evidence behind it, and what to do next.</p>
-        </motion.div>
-
+        <PageIntro label="Check a job" title="Share it however you received it" sub="get a verdict and the evidence behind it" />
         <div className="mt-10">
           <AnimatePresence mode="wait">
             {busy ? (

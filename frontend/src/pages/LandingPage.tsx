@@ -8,7 +8,9 @@ import {
   CircleAlert,
   CircleCheck,
   CircleX,
+  FileText,
   Globe,
+  ImageIcon,
   Link2,
   Loader2,
   MessageSquareText,
@@ -66,29 +68,65 @@ function useCycle(length: number, ms: number) {
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
 
+const INPUTS = [
+  { id: 'url', label: 'Link', icon: Link2 },
+  { id: 'text', label: 'Text', icon: MessageSquareText },
+  { id: 'image', label: 'Screenshot', icon: ImageIcon },
+  { id: 'pdf', label: 'PDF', icon: FileText },
+] as const;
+type InputMode = (typeof INPUTS)[number]['id'];
+
 function HeroChecker() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'url' | 'text'>('url');
+  const [mode, setMode] = useState<InputMode>('url');
   const [value, setValue] = useState('');
+  const isFile = mode === 'image' || mode === 'pdf';
+
+  function choose(next: InputMode) {
+    // Uploads happen on the Check a job page, opened on the right tab.
+    if (next === 'image' || next === 'pdf') {
+      navigate('/analyze', { state: { mode: next } });
+      return;
+    }
+    setMode(next);
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (isFile) return navigate('/analyze', { state: { mode } });
     navigate('/analyze', { state: { mode, value: value.trim(), autostart: value.trim().length > 0 } });
   }
+
   return (
     <motion.form {...fade} transition={{ ...fade.transition, delay: 0.5 }} onSubmit={submit} className="relative mx-auto mt-12 w-full max-w-2xl">
+      <div className="mb-3 flex flex-wrap justify-center gap-1.5" role="tablist" aria-label="What do you want to check?">
+        {INPUTS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mode === id}
+            onClick={() => choose(id)}
+            className={cn(
+              'relative flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] transition-colors',
+              mode === id ? 'text-bg' : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
+            )}
+          >
+            {mode === id && <motion.span layoutId="hero-input-pill" className="absolute inset-0 rounded-full bg-fg" transition={{ type: 'spring', bounce: 0.15, duration: 0.45 }} />}
+            <Icon className="relative size-4" />
+            <span className="relative">{label}</span>
+          </button>
+        ))}
+      </div>
       <div className="relative isolate overflow-hidden rounded-full border border-line-strong bg-bg/80 p-1.5 backdrop-blur-xl">
         <BorderBeam duration={9} />
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setMode(mode === 'url' ? 'text' : 'url')} className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg" aria-label={mode === 'url' ? 'Switch to pasting text' : 'Switch to a job link'}>
-            {mode === 'url' ? <Link2 className="size-4" /> : <MessageSquareText className="size-4" />}
-            <span className="hidden sm:inline">{mode === 'url' ? 'Link' : 'Text'}</span>
-          </button>
           <input
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={mode === 'url' ? 'Paste a job link — LinkedIn, Indeed, a careers page…' : 'Paste the job post or recruiter message…'}
             aria-label={mode === 'url' ? 'Job link' : 'Job text'}
-            className="h-10 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
+            className="h-10 min-w-0 flex-1 bg-transparent px-4 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
           <button type="submit" className={buttonClasses('primary', 'md', 'shrink-0')}>
             Check it <ChevronRight className="size-4" />

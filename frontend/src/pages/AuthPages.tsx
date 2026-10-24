@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '@/api/client';
 import { Alert } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
+import { FxCard, SignalField, TwoTone } from '@/components/landing/Effects';
 import { LogoMark } from '@/components/ui/Logo';
 import { useAuthStore } from '@/store/authStore';
 
@@ -16,15 +17,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center overflow-hidden px-4 py-12">
-      <div className="bg-grid mask-radial absolute inset-0 -z-10" aria-hidden />
-      <div className="absolute left-1/2 top-0 -z-10 h-72 w-[600px] -translate-x-1/2 rounded-full bg-accent/15 blur-[110px]" aria-hidden />
+      <div className="absolute inset-0 -z-10 opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_70%)]" aria-hidden>
+        <SignalField />
+      </div>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[400px]">
         <div className="text-center">
           <LogoMark className="mx-auto size-10" />
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-1.5 text-[15px] text-fg-muted">{subtitle}</p>
+          <TwoTone as="h1" title={title} sub={subtitle} className="mt-6 text-[28px] leading-[1.2]" />
         </div>
-        <div className="mt-8 rounded-3xl border border-line bg-surface p-6 shadow-xl shadow-black/5 sm:p-7">{children}</div>
+        <FxCard className="mt-8 p-6 sm:p-7" beam>
+          {children}
+        </FxCard>
         <p className="mt-6 text-center text-sm text-fg-muted">{footer}</p>
       </motion.div>
     </div>

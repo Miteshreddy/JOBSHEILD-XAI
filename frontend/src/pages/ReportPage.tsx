@@ -50,7 +50,7 @@ function Panel({ title, icon, children, className, aside }: { title: string; ico
       className={cn('rounded-3xl border border-line bg-surface p-6 sm:p-7', className)}
     >
       <div className="mb-5 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+        <h2 className="flex items-center gap-2 text-[17px] font-normal tracking-[-0.01em]">
           {icon && <span className="text-accent">{icon}</span>}
           {title}
         </h2>
@@ -250,7 +250,7 @@ export function ReportView({ analysis }: { analysis: Analysis }) {
               <Badge tone="neutral">{analysis.confidence[0].toUpperCase() + analysis.confidence.slice(1)} confidence</Badge>
               <Badge tone="neutral">{INPUT_COPY[analysis.inputType]}</Badge>
             </div>
-            <h1 className="mt-4 text-2xl font-semibold leading-snug tracking-tight sm:text-[28px]">{analysis.summary}</h1>
+            <h1 className="mt-4 text-[24px] font-normal leading-[1.3] tracking-[-0.02em] sm:text-[30px]">{analysis.summary}</h1>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="flex items-center gap-3 rounded-2xl border border-line bg-bg-subtle p-3.5">

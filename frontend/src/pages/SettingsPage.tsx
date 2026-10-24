@@ -4,18 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { logoutAll } from '@/api/auth';
 import { getApiErrorMessage } from '@/api/client';
+import { PageIntro } from '@/components/landing/Effects';
 import { ThemeControls } from '@/components/layout/ThemePicker';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-6 border-t border-line py-8 md:grid-cols-[240px_1fr]">
+    <section className="grid gap-6 border-b border-line py-8 md:grid-cols-[240px_1fr]">
       <div>
         <h2 className="font-medium">{title}</h2>
         <p className="mt-1 text-sm text-fg-muted">{description}</p>
       </div>
-      <div className="rounded-2xl border border-line bg-surface p-5">{children}</div>
+      <div className="bg-surface p-6">{children}</div>
     </section>
   );
 }
@@ -41,9 +42,8 @@ export function SettingsPage() {
 
   return (
     <div className="container-page max-w-4xl py-12 sm:py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-1.5 text-fg-muted">Manage your account and how JobShield looks.</p>
-      <div className="mt-10">
+      <PageIntro label="Settings" title="Your account and appearance" sub="saved on this device" />
+      <div>
         <Section title="Appearance" description="Choose light or dark mode and an accent colour. Saved on this device.">
           <ThemeControls />
         </Section>

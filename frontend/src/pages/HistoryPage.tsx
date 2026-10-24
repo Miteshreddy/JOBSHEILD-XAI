@@ -7,6 +7,7 @@ import { listHistory } from '@/api/analysis';
 import { getApiErrorMessage } from '@/api/client';
 import { Alert, Badge, Skeleton } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
+import { PageIntro } from '@/components/landing/Effects';
 import { cn } from '@/lib/cn';
 import { VERDICT_COPY } from '@/lib/verdict';
 import type { Verdict } from '@/types';
@@ -31,13 +32,9 @@ export function HistoryPage() {
 
   return (
     <div className="container-page max-w-4xl py-12 sm:py-16">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">History</h1>
-          <p className="mt-1.5 text-fg-muted">Every job you’ve checked while signed in.</p>
-        </div>
-        <ButtonLink to="/analyze" size="sm">Check a job</ButtonLink>
-      </div>
+      <PageIntro label="History" title="Every job you’ve checked" sub="saved while you were signed in">
+        <ButtonLink to="/analyze">Check a job</ButtonLink>
+      </PageIntro>
 
       <div className="mt-8 flex flex-wrap gap-1.5" role="tablist" aria-label="Filter by verdict">
         {FILTERS.map((f) => (
